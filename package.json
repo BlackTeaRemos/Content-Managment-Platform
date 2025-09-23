@@ -1,0 +1,56 @@
+{
+  "name": "mpg_primary_configurator",
+  "version": "1.0.0",
+  "description": "A Discord bot for object storage, written in TypeScript.",
+  "main": "cmp/app.js",
+  "scripts": {
+    "clean": "rimraf cmp",
+    "build": "npm run clean && tsc",
+    "start": "ts-node-esm src/index.ts",
+    "start:prod": "node cmp/index.js",
+    "test": "vitest run",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings=0",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\""
+  },
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "discord.js": "^14.20.0",
+    "joi": "^17.13.3",
+    "js-yaml": "^4.1.0",
+    "neo4j-driver": "^5.23.0",
+  "sqlite3": "^5.1.7",
+  "minio": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.12.12",
+    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/parser": "^8.43.0",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "prettier": "^3.6.2",
+    "rimraf": "^5.0.0",
+    "ts-node": "^10.9.2",
+  "typescript": "^5.5.0",
+  "@types/minio": "^7.0.0",
+    "typescript-eslint": "^8.43.0",
+    "vitest": "^1.5.0"
+  },
+  "vitest": {
+    "coverage": {
+      "provider": "v8",
+      "lines": 80,
+      "branches": 80,
+      "functions": 80,
+      "statements": 80
+    }
+  }
+}

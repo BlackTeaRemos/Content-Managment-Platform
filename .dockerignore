@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+coverage
+cmp
+src/**/*.test.ts
+.tmp
+.DS_Store
