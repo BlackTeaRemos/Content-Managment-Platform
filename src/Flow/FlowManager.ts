@@ -1,4 +1,5 @@
 import { Interaction, Message } from 'discord.js';
+import type { ExecutionContext } from '../Domain/Command.js';
 
 /**
  * Represents a single step in an interactive flow.
@@ -34,6 +35,8 @@ export interface StepContext<State> {
     interaction?: Interaction;
     advance: () => Promise<void>;
     cancel: () => Promise<void>;
+    /** Execution context for caching and shared state across flow steps */
+    executionContext?: ExecutionContext;
 }
 
 /**
@@ -52,12 +55,12 @@ export class FlowManager<State> {
      * @param initialState initial state object
      * @param steps ordered list of steps
      */
-    public async start(userId: string, initialInteraction: Interaction, initialState: State, steps: FlowStep<State>[]) {
+    public async start(userId: string, initialInteraction: Interaction, initialState: State, steps: FlowStep<State>[], executionContext?: ExecutionContext) {
         // If existing, cancel
         if (this.flows.has(userId)) {
             await this.flows.get(userId)!.cancel();
         }
-        const instance = new FlowInstance(userId, initialInteraction, initialState, steps, this);
+        const instance = new FlowInstance(userId, initialInteraction, initialState, steps, this, executionContext);
         this.flows.set(userId, instance);
         await instance.start();
     }
@@ -94,8 +97,8 @@ export class FlowManager<State> {
     /**
      * Create a FlowBuilder for fluent flow construction.
      */
-    public builder(userId: string, initialInteraction: Interaction, initialState: State): FlowBuilder<State> {
-        return new FlowBuilder(this, userId, initialInteraction, initialState);
+    public builder(userId: string, initialInteraction: Interaction, initialState: State, executionContext?: ExecutionContext): FlowBuilder<State> {
+        return new FlowBuilder(this, userId, initialInteraction, initialState, executionContext);
     }
 }
 
@@ -112,6 +115,7 @@ class FlowInstance<State> {
         private state: State,
         private steps: FlowStep<State>[],
         private manager: FlowManager<State>,
+        private executionContext?: ExecutionContext,
     ) {
         this.initialInteraction = initialInteraction;
     }
@@ -130,6 +134,7 @@ class FlowInstance<State> {
                 interaction: this.initialInteraction,
                 advance: this.advance.bind(this),
                 cancel: this.cancel.bind(this),
+                executionContext: this.executionContext,
             });
         }
     }
@@ -144,6 +149,7 @@ class FlowInstance<State> {
                 interaction,
                 advance: this.advance.bind(this),
                 cancel: this.cancel.bind(this),
+                executionContext: this.executionContext,
             };
             const ok = step.handleInteraction ? await step.handleInteraction(ctx, interaction) : true;
             if (ok) await this.advance();
@@ -158,6 +164,7 @@ class FlowInstance<State> {
                 state: this.state,
                 advance: this.advance.bind(this),
                 cancel: this.cancel.bind(this),
+                executionContext: this.executionContext,
             };
             const ok = await step.handleMessage(ctx, message);
             if (ok) await this.advance();
@@ -194,6 +201,7 @@ export class FlowBuilder<State> {
         private userId: string,
         private initialInteraction: Interaction,
         private initialState: State,
+        private executionContext?: ExecutionContext,
     ) {}
 
     /**
@@ -212,7 +220,7 @@ export class FlowBuilder<State> {
      * Start the built flow.
      */
     public start(): Promise<void> {
-        return this.manager.start(this.userId, this.initialInteraction, this.initialState, this.steps);
+        return this.manager.start(this.userId, this.initialInteraction, this.initialState, this.steps, this.executionContext);
     }
 }
 

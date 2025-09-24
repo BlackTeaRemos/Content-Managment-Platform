@@ -5,6 +5,7 @@ import {
     CommandModuleMeta,
     CommandResult,
     CommandExecutionContext,
+    createExecutionContext,
 } from '../Domain/index.js';
 
 /** Error thrown when attempting to register a duplicate command id. */
@@ -100,10 +101,16 @@ export class CommandRegistry {
         const mod = this.Get(id);
 
         try {
+            // Ensure executionContext is always present
+            if (!ctx.executionContext) {
+                ctx.executionContext = createExecutionContext(ctx.correlationId);
+            }
+
             // Basic permission check (future expansion)
             if (mod.meta.permissions?.requiredRoles && !ctx.options.__userRoles) {
                 return { ok: false, error: 'MISSING_ROLES', message: 'Role information not provided' };
             }
+            
             return await mod.execute(ctx);
         } catch (err: any) {
             return { ok: false, error: err?.message || 'UNKNOWN_ERROR' };
