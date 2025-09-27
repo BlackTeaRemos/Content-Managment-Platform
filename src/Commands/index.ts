@@ -30,8 +30,21 @@ const commands: BotCommandsMap = {};
 export const commandsReady: Promise<void> = (async () => {
     let modules: any[];
     try {
-        // Include commands in subdirectories (e.g. object group)
-        modules = await ExecuteFilesAndCollectExports(commandsRoot, [/\.js$/, /\.ts$/], 1, DepthMode.UpToDepth);
+        // load all commands in root (no subdirectories)
+        const rootModules = await ExecuteFilesAndCollectExports(
+            commandsRoot,
+            [/\.js$/, /\.ts$/],
+            0,
+            DepthMode.UpToDepth,
+        );
+        // load only group index files one level down
+        const groupModules = await ExecuteFilesAndCollectExports(
+            commandsRoot,
+            [/index\.js$/, /index\.ts$/],
+            1,
+            DepthMode.ExactDepth,
+        );
+        modules = [...rootModules, ...groupModules];
     } catch (err) {
         log.error('Error scanning command files', `[commands/index]`);
         return;

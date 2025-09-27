@@ -1,7 +1,7 @@
 /**
  * Handles the 'interactionCreate' event from Discord, processing all interactions (slash commands, buttons, etc).
  */
-import { Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
+import { Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } from 'discord.js';
 import { log } from '../Common/Log.js';
 import { flowManager } from '../Flow/FlowManager.js';
 
@@ -52,7 +52,7 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
             state.gameName = gameName;
             await interaction.reply({
                 content: 'Game name set. Please send the game image as an attachment in your next message.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     }

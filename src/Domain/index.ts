@@ -19,4 +19,7 @@ export type { EventName } from './Utility.js';
 export { EVENT_NAMES } from './Utility.js';
 
 // Command Module
-export type { CommandModuleMeta, CommandExecutionContext, CommandResult, CommandModule } from './Command.js';
+export type { CommandModuleMeta, CommandExecutionContext, CommandResult, CommandModule, ExecutionContext } from './Command.js';
+
+// Execution Context Implementation
+export { CommandExecutionContextImpl, createExecutionContext } from './ExecutionContext.js';

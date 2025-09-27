@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, SlashCommandSubcommandBuilder, MessageFlags } from 'discord.js';
 import { readdirSync, lstatSync } from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
@@ -30,12 +30,13 @@ await (async () => {
             const mods = await Promise.all(files.map(file => import(pathToFileURL(path.join(groupPath, file)).href)));
             // Register subcommands
             data.addSubcommandGroup(group => {
-                group.setName(groupName).setDescription(`Manage ${groupName}`);
+                const groupId = groupName.toLowerCase(); // Discord requires lowercase identifiers
+                group.setName(groupId).setDescription(`Manage ${groupId}`);
                 for (const mod of mods) {
                     const subData: SlashCommandSubcommandBuilder = (mod as any).data;
                     if (subData && typeof subData.name === 'string') {
                         group.addSubcommand(() => subData);
-                        handlers[`${groupName}.${subData.name}`] = (mod as any).execute;
+                        handlers[`${groupId}.${subData.name.toLowerCase()}`] = (mod as any).execute;
                     }
                 }
                 return group;
@@ -48,12 +49,14 @@ await (async () => {
 
 /** Dispatch to the appropriate handler based on group and subcommand */
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const group = interaction.options.getSubcommandGroup(false);
-    const sub = interaction.options.getSubcommand(true);
-    const key = `${group}.${sub}`;
+    const groupRaw = interaction.options.getSubcommandGroup(false) ?? '';
+    const subRaw = interaction.options.getSubcommand(true) ?? '';
+    const key = `${groupRaw.toLowerCase()}.${subRaw.toLowerCase()}`;
     const handler = handlers[key];
 
     if (handler) {
         await handler(interaction);
+    } else {
+        await interaction.reply({ content: 'Unknown subcommand', flags: MessageFlags.Ephemeral }).catch(() => undefined);
     }
 }

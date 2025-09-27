@@ -15,6 +15,28 @@ export interface CommandModuleMeta {
     tags?: string[]; // module categorization tags
 }
 
+/** Execution context for avoiding recomputation and sharing state across command execution flow. */
+export interface ExecutionContext {
+    /** Correlation ID for tracing requests */
+    correlationId: string;
+    /** Cache for storing computed values to avoid recomputation */
+    cache: Map<string, any>;
+    /** Shared state object that can be modified by developers for custom context */
+    shared: Record<string, any>;
+    /** Timestamp when context was created */
+    createdAt: Date;
+    /** Get or compute cached value */
+    getOrCompute<T>(key: string, computeFn: () => Promise<T> | T): Promise<T>;
+    /** Check if key exists in cache */
+    has(key: string): boolean;
+    /** Set cached value */
+    set(key: string, value: any): void;
+    /** Clear all cached values */
+    clear(): void;
+    /** Get cache statistics for debugging/monitoring (optional implementation) */
+    getStats?(): { size: number; keys: string[]; createdAt: Date; correlationId: string };
+}
+
 /** Arguments passed to a command execute handler (abstracted from discord.js specifics for testability). */
 export interface CommandExecutionContext {
     guildId: string; // guild scope
@@ -26,7 +48,8 @@ export interface CommandExecutionContext {
     reply: (
         message: string | { content?: string; ephemeral?: boolean; flags?: number; embeds?: any[]; components?: any[] },
     ) => Promise<any>; // responder
-    correlationId?: string; // tracing id
+    /** Execution context for caching and shared state across command execution flow */
+    executionContext: ExecutionContext;
 }
 
 /** Result contract for an executed command. */
