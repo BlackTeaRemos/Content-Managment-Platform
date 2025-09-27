@@ -3,6 +3,7 @@ import {
     ChatInputCommandInteraction,
     StringSelectMenuBuilder,
     ActionRowBuilder,
+    MessageFlags,
 } from 'discord.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 
@@ -49,7 +50,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                         { label: 'Show Cache Stats', value: 'stats' },
                     ]);
 
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
                 await interaction.editReply({
                     content: `**Flow Step 1:** Cached expensive guild data! Select an option:`,
                     components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select)],
@@ -126,7 +127,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
                 await (interaction as ChatInputCommandInteraction).followUp({
                     content: `**Flow Step 2 Results:**\n\n${content}\n\n*Data was efficiently cached across flow steps!*`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             })
             .next()

@@ -1,4 +1,4 @@
-import { SlashCommandSubcommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandSubcommandBuilder, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { createCommandContext } from '../../../Common/ExecutionContextHelpers.js';
 
 export const data = new SlashCommandSubcommandBuilder()
@@ -12,7 +12,7 @@ export const data = new SlashCommandSubcommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
     const ctx = createCommandContext(interaction);
 
-    await ctx.reply({ content: 'Running expensive operations with execution context...', ephemeral: true });
+    await ctx.reply({ content: 'Running expensive operations with execution context...', flags: MessageFlags.Ephemeral });
 
     // Simulate an expensive database query that we want to avoid repeating
     const userData = await ctx.executionContext!.getOrCompute(`user:${ctx.userId}`, async () => {
@@ -72,6 +72,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 The second userData call used cached data instead of recomputing!
 Cache validation: ${sameData ? 'PASSED - Same data returned' : 'FAILED - Different data'}
         `.trim(),
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
     });
 }

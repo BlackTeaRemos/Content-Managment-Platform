@@ -48,9 +48,8 @@ export interface CommandExecutionContext {
     reply: (
         message: string | { content?: string; ephemeral?: boolean; flags?: number; embeds?: any[]; components?: any[] },
     ) => Promise<any>; // responder
-    correlationId?: string; // tracing id (deprecated - use executionContext.correlationId)
     /** Execution context for caching and shared state across command execution flow */
-    executionContext?: ExecutionContext;
+    executionContext: ExecutionContext;
 }
 
 /** Result contract for an executed command. */

@@ -39,12 +39,21 @@ export function createCommandContext(
         channelId: interaction.channelId,
         options: Object.fromEntries(interaction.options.data.map(option => [option.name, option.value])),
         reply: async message => {
-            if (typeof message === 'string') {
-                return await interaction.reply({ content: message });
+            // Use reply for initial response, followUp for subsequent or deferred
+            const isInitial = !interaction.replied && !interaction.deferred;
+            if (isInitial) {
+                if (typeof message === 'string') {
+                    return await interaction.reply({ content: message });
+                }
+                return await interaction.reply(message);
+            } else {
+                // Fallback to followUp for later responses
+                if (typeof message === 'string') {
+                    return await interaction.followUp({ content: message });
+                }
+                return await interaction.followUp(message);
             }
-            return await interaction.reply(message);
         },
-        correlationId,
         executionContext,
     };
 }

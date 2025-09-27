@@ -6,10 +6,9 @@ This document describes the execution context feature implemented to avoid unnec
 
 Each command in `src/commands` can now access an execution context that provides:
 
-1. **Caching/Memoization** - Avoid recomputing expensive operations
-2. **Shared State** - Pass data between different parts of the execution flow  
+1. **Caching/Memorization** - Avoid recomputing expensive operations
+2. **Shared State** - Pass data between different parts of the execution flow
 3. **Tracing** - Correlation IDs for debugging and monitoring
-4. **Easy Developer Experience** - Simple, extensible interface
 
 ## Core Interfaces
 
@@ -17,26 +16,15 @@ Each command in `src/commands` can now access an execution context that provides
 
 ```typescript
 interface ExecutionContext {
-    correlationId: string;                    // For tracing requests
-    cache: Map<string, any>;                  // For caching computed values
-    shared: Record<string, any>;              // For custom shared state
-    createdAt: Date;                          // When context was created
+    correlationId: string; // For tracing requests
+    cache: Map<string, any>; // For caching computed values
+    shared: Record<string, any>; // For custom shared state
+    createdAt: Date; // When context was created
     getOrCompute<T>(key: string, computeFn: () => Promise<T> | T): Promise<T>;
-    has(key: string): boolean;                // Check if cached
-    set(key: string, value: any): void;       // Set cached value
-    clear(): void;                            // Clear all cache
+    has(key: string): boolean; // Check if cached
+    set(key: string, value: any): void; // Set cached value
+    clear(): void; // Clear all cache
     getStats?(): { size: number; keys: string[]; createdAt: Date; correlationId: string };
-}
-```
-
-### CommandExecutionContext (Extended)
-
-The existing `CommandExecutionContext` interface now includes:
-
-```typescript
-interface CommandExecutionContext {
-    // ... existing fields
-    executionContext?: ExecutionContext;      // New field (optional for backward compatibility)
 }
 ```
 
@@ -49,15 +37,12 @@ import { createCommandContext } from '../../../Common/ExecutionContextHelpers.js
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     const ctx = createCommandContext(interaction);
-    
+
     // Expensive operation cached for subsequent calls
-    const userData = await ctx.executionContext!.getOrCompute(
-        `user:${ctx.userId}`,
-        async () => {
-            return await database.getUser(ctx.userId); // Only called once
-        }
-    );
-    
+    const userData = await ctx.executionContext!.getOrCompute(`user:${ctx.userId}`, async () => {
+        return await database.getUser(ctx.userId); // Only called once
+    });
+
     await ctx.reply(`Hello ${userData.username}!`);
 }
 ```
@@ -78,7 +63,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 // ... use data
             })
             .next()
-            .step('step2') 
+            .step('step2')
             .prompt(async ctx => {
                 // Reuse cached data in step 2 (no recomputation)
                 const data = await ctx.executionContext?.getOrCompute('key', computeData);
@@ -95,11 +80,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 ```typescript
 export async function execute(interaction: ChatInputCommandInteraction) {
     const ctx = createCommandContext(interaction);
-    
+
     // Set shared state early in execution
     ctx.executionContext!.shared.startTime = Date.now();
     ctx.executionContext!.shared.userPrefs = await getUserPreferences(ctx.userId);
-    
+
     // Later in execution, access shared state
     const duration = Date.now() - ctx.executionContext!.shared.startTime;
     const prefs = ctx.executionContext!.shared.userPrefs;
@@ -116,14 +101,8 @@ The `CommandRegistry.Execute()` method automatically creates an `ExecutionContex
 
 The `FlowManager` and `FlowBuilder` have been extended to accept and pass execution context through all flow steps:
 
-- `flowManager.builder(userId, interaction, state, executionContext?)` 
+- `flowManager.builder(userId, interaction, state, executionContext?)`
 - All `StepContext` objects include `executionContext?: ExecutionContext`
-
-### Backward Compatibility
-
-- Existing commands continue to work unchanged
-- `executionContext` is optional in all interfaces
-- Helper functions bridge between old Discord.js style and new context style
 
 ## Demo Commands
 
@@ -131,21 +110,3 @@ Two demo commands are included:
 
 1. **`/object diagnostic context-demo`** - Shows basic caching and shared state
 2. **`/object diagnostic flow-demo`** - Shows execution context with interactive flows
-
-## Benefits
-
-1. **Performance** - Avoid expensive recomputations (database queries, API calls, etc.)
-2. **State Management** - Clean way to pass data through execution flow
-3. **Debugging** - Correlation IDs and statistics for monitoring
-4. **Developer Experience** - Simple `getOrCompute()` pattern
-5. **Flexibility** - Extensible `shared` object for custom use cases
-
-## Implementation Details
-
-- Uses Node.js built-in `crypto.randomUUID()` for correlation IDs
-- Memory-based caching (cleared after command execution completes)
-- Thread-safe Map-based cache implementation
-- Optional statistics gathering for debugging
-- Minimal changes to existing codebase
-
-This feature addresses the requirement for "execution context that commands should be aware of to avoid possible unnecessary computations" while being easily modifiable for developers.
