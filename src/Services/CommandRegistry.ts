@@ -7,6 +7,8 @@ import {
     CommandExecutionContext,
     createExecutionContext,
 } from '../Domain/index.js';
+import { PermissionManager, PermissionContext } from '../Domain/Permission.js';
+import { log } from '../Common/Log.js';
 
 /** Error thrown when attempting to register a duplicate command id. */
 export class DuplicateCommandError extends Error {
@@ -24,6 +26,7 @@ export class CommandNotFoundError extends Error {
 /** Options controlling CommandRegistry behavior. */
 export interface CommandRegistryOptions {
     caseInsensitive?: boolean;
+    permissionManager?: PermissionManager;
 }
 
 /** Internal storage entry capturing module & load timestamp. */
@@ -40,9 +43,11 @@ export class CommandRegistry {
     private _commands: Map<string, RegistryEntry> = new Map(); // id -> entry
     private _caseInsensitive: boolean; // normalization toggle
     private _stats = { loads: 0, reloads: 0, failures: 0 }; // metrics counters
+    private _permissionManager?: PermissionManager; // permission system integration
 
     constructor(opts: CommandRegistryOptions = {}) {
         this._caseInsensitive = !!opts.caseInsensitive;
+        this._permissionManager = opts.permissionManager;
     }
 
     /** Normalize key based on case-insensitivity option. */
@@ -101,9 +106,53 @@ export class CommandRegistry {
         const mod = this.Get(id);
 
         try {
-            // Basic permission check (future expansion)
+            // Legacy permission check
             if (mod.meta.permissions?.requiredRoles && !ctx.options.__userRoles) {
                 return { ok: false, error: 'MISSING_ROLES', message: 'Role information not provided' };
+            }
+
+            // New permission system check
+            if (this._permissionManager && mod.meta.permissions?.requiredTags?.length) {
+                const permissionContext: PermissionContext = {
+                    userId: ctx.userId,
+                    guildId: ctx.guildId,
+                    requiredTags: mod.meta.permissions.requiredTags,
+                    userRoleIds: ctx.options.__userRoles
+                };
+
+                const permissionResult = await this._permissionManager.evaluate(permissionContext);
+                
+                if (!permissionResult.allowed) {
+                    log.info(`Command ${id} blocked for user ${ctx.userId}: ${permissionResult.reasons.join(', ')}`, 'CommandRegistry');
+                    
+                    // If ephemeral grant is available, create request
+                    if (permissionResult.requiresEphemeralGrant) {
+                        try {
+                            const requestId = await this._permissionManager.requestEphemeralGrant(
+                                permissionContext,
+                                `Command: /${id} - ${mod.meta.description}`,
+                                'Permission denied for required tags: ' + permissionResult.missingTags.join(', ')
+                            );
+                            
+                            return {
+                                ok: false,
+                                error: 'PERMISSION_DENIED',
+                                message: `Permission denied. Ephemeral grant requested (ID: ${requestId}). Users with permission management rights will be notified.`,
+                                data: { ephemeralRequestId: requestId }
+                            };
+                        } catch (error) {
+                            log.error(`Failed to create ephemeral permission request: ${error}`, 'CommandRegistry');
+                        }
+                    }
+                    
+                    return {
+                        ok: false,
+                        error: 'PERMISSION_DENIED',
+                        message: `Permission denied: ${permissionResult.reasons.join(', ')}`
+                    };
+                }
+                
+                log.debug(`Command ${id} permission check passed for user ${ctx.userId} at ${permissionResult.level} level`, 'CommandRegistry');
             }
 
             return await mod.execute(ctx);

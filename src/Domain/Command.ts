@@ -9,8 +9,10 @@ export interface CommandModuleMeta {
     description: string; // human description
     version?: string; // optional semantic version for reload diffing
     permissions?: {
-        requiredRoles?: string[]; // discord role ids required
+        requiredRoles?: string[]; // discord role ids required (legacy)
         allowDM?: boolean; // whether usable in DMs
+        requiredTags?: string[]; // permission tags required for command execution
+        argumentTags?: Record<string, string[]>; // permission tags required for specific arguments
     };
     tags?: string[]; // module categorization tags
 }
