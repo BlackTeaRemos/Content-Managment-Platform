@@ -12,7 +12,18 @@ import { createFactory } from '../../../Flow/Object/Building/Create.js';
 import { log } from '../../../Common/Log.js';
 import { flowManager } from '../../../Flow/FlowManager.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
-import type { ExecutionContext } from '../../../Domain/index.js';
+import type { ExecutionContext, CommandModuleMeta } from '../../../Domain/index.js';
+
+// Add permission metadata for this command
+export const meta: CommandModuleMeta = {
+    id: 'object-building-create',
+    description: 'Interactive create a new factory',
+    permissions: {
+        requiredTags: ['object.building.create', 'factory.create'],
+        allowDM: false
+    },
+    tags: ['object', 'building', 'factory', 'create']
+};
 
 interface FlowState {
     type: string;

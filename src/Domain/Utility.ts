@@ -22,6 +22,10 @@ export const EVENT_NAMES = {
     automationViewGenerated: 'automation.view.generated',
     triggerExecuted: 'trigger.executed',
     scriptExecuted: 'script.executed',
+    permissionGranted: 'permission.granted',
+    permissionRevoked: 'permission.revoked',
+    permissionEphemeralRequest: 'permission.ephemeral_request',
+    permissionEphemeralResponse: 'permission.ephemeral_response',
 } as const;
 
 /** Type union of event string literals. */
