@@ -172,4 +172,4 @@ export class CommandRegistry {
     }
 }
 
-export const commandRegistry = new CommandRegistry(); // default singleton
+export { commandRegistry } from '../Setup/PermissionSystem.js'; // singleton with permission system

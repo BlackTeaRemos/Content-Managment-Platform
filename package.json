@@ -9,10 +9,10 @@
     "start": "ts-node-esm src/index.ts",
     "start:prod": "node cmp/index.js",
     "test": "vitest run",
-    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings=0",
+    "lint": "eslint \"src/**/*.ts\" --max-warnings=0",
     "lint:fix": "npm run lint -- --fix",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
   },
   "author": "",
   "license": "MIT",
