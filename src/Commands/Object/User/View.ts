@@ -2,6 +2,7 @@ import { SlashCommandSubcommandBuilder, ChatInputCommandInteraction, MessageFlag
 import { listUsers, getUserByDiscordId } from '../../../Flow/Object/User/View.js';
 import { log } from '../../../Common/Log.js';
 import { createCommandContext } from '../../../Common/ExecutionContextHelpers.js';
+import { checkCommandPermissions } from '../../../Common/PermissionMiddleware.js';
 
 export const data = new SlashCommandSubcommandBuilder()
     .setName('view')
@@ -9,6 +10,19 @@ export const data = new SlashCommandSubcommandBuilder()
     .addUserOption(o => o.setName('user').setDescription('User to view'));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+    // Check permissions first
+    const permissionResult = await checkCommandPermissions(interaction, {
+        requiredPermissions: ['command.object.user.view'],
+        requiredTags: ['user_management'],
+        adminOnly: false
+    });
+
+    if (!permissionResult.allowed) {
+        // Permission denied, response already sent by middleware
+        return;
+    }
+
+    // Permission granted, proceed with command execution
     const ctx = createCommandContext(interaction);
 
     const userOption = interaction.options.getUser('user');
@@ -39,7 +53,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     } catch (error) {
         log.error(
             `Error retrieving user data: ${error instanceof Error ? error.stack || error.message : String(error)}`,
-            'UserViewCommand',
+            'UserViewCommand'
         );
         return await ctx.reply({ content: 'Error retrieving user data', flags: MessageFlags.Ephemeral });
     }

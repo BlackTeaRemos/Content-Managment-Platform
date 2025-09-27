@@ -11,6 +11,7 @@ import {
 import { createUser } from '../../../Flow/Object/User/Create.js';
 import { flowManager } from '../../../Flow/FlowManager.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
+import { checkCommandPermissions } from '../../../Common/PermissionMiddleware.js';
 import type { ExecutionContext } from '../../../Domain/index.js';
 
 interface FlowState {
@@ -29,6 +30,19 @@ export const data = new SlashCommandSubcommandBuilder()
     .setDescription('Interactive register a new user');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+    // Check permissions first
+    const permissionResult = await checkCommandPermissions(interaction, {
+        requiredPermissions: ['command.object.user.create'],
+        requiredTags: ['user_management'],
+        adminOnly: false
+    });
+
+    if (!permissionResult.allowed) {
+        // Permission denied, response already sent by middleware
+        return;
+    }
+
+    // Permission granted, proceed with command execution
     await executeWithContext(interaction, async (flowManager, executionContext) => {
         // Start interactive flow: ask for Discord ID via modal, then create user
         await flowManager

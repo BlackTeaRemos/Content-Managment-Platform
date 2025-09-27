@@ -5,6 +5,7 @@ import {
     MessageFlags,
 } from 'discord.js';
 import { createCommandContext } from '../../Common/ExecutionContextHelpers.js';
+import { checkCommandPermissions } from '../../Common/PermissionMiddleware.js';
 
 // Diagnostic: list commands built by loader
 
@@ -14,6 +15,18 @@ export const data = new SlashCommandBuilder()
     .addSubcommand(sub => sub.setName('tree').setDescription('List all registered commands'));
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+    // Check permissions first
+    const permissionResult = await checkCommandPermissions(interaction, {
+        requiredPermissions: ['command.diagnostic.tree'],
+        adminOnly: true // Diagnostic commands are admin-only
+    });
+
+    if (!permissionResult.allowed) {
+        // Permission denied, response already sent by middleware
+        return;
+    }
+
+    // Permission granted, proceed with command execution
     const ctx = createCommandContext(interaction);
     const sub = interaction.options.getSubcommand(true);
     if (sub === 'tree') {
