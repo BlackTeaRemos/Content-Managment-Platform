@@ -18,6 +18,8 @@ export const ERROR_CODES = {
     NOT_FOUND: 'NOT_FOUND',
     CONFLICT: 'CONFLICT',
     INTERNAL_ERROR: 'INTERNAL_ERROR',
+    PERMISSION_DENIED: 'PERMISSION_DENIED',
+    EPHEMERAL_PERMISSION_REQUIRED: 'EPHEMERAL_PERMISSION_REQUIRED',
 } as const;
 
 /** Union type of all known error code string literals. */
@@ -94,5 +96,19 @@ export class ConflictError extends AppError {
 export class InternalError extends AppError {
     constructor(message: string, details?: Record<string, any>, cause?: unknown) {
         super(ERROR_CODES.INTERNAL_ERROR, message, details, cause);
+    }
+}
+
+/** PermissionDeniedError when user lacks required permissions to execute action. */
+export class PermissionDeniedError extends AppError {
+    constructor(message: string, details?: Record<string, any>) {
+        super(ERROR_CODES.PERMISSION_DENIED, message, details);
+    }
+}
+
+/** EphemeralPermissionRequiredError when action requires ephemeral admin permission grant. */
+export class EphemeralPermissionRequiredError extends AppError {
+    constructor(message: string, details?: Record<string, any>) {
+        super(ERROR_CODES.EPHEMERAL_PERMISSION_REQUIRED, message, details);
     }
 }

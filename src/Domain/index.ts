@@ -23,3 +23,17 @@ export type { CommandModuleMeta, CommandExecutionContext, CommandResult, Command
 
 // Execution Context Implementation
 export { CommandExecutionContextImpl, createExecutionContext } from './ExecutionContext.js';
+
+// Permission System
+export type { 
+    Permission, 
+    PermissionContext, 
+    PermissionRequest, 
+    PermissionEvaluationResult,
+    EphemeralPermissionGrant,
+    PermissionSet,
+    PermissionRepository,
+    PermissionEvaluator,
+    EphemeralPermissionManager
+} from './Permission.js';
+export { PermissionState } from './Permission.js';

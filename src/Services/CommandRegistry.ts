@@ -6,7 +6,14 @@ import {
     CommandResult,
     CommandExecutionContext,
     createExecutionContext,
+    PermissionContext,
+    PermissionRequest,
+    PermissionState
 } from '../Domain/index.js';
+import { PermissionDeniedError, EphemeralPermissionRequiredError } from '../Common/Errors.js';
+import { log } from '../Common/Log.js';
+import { permissionEvaluator } from './PermissionEvaluator.js';
+import { ephemeralPermissionManager } from './EphemeralPermissionManager.js';
 
 /** Error thrown when attempting to register a duplicate command id. */
 export class DuplicateCommandError extends Error {
@@ -101,13 +108,123 @@ export class CommandRegistry {
         const mod = this.Get(id);
 
         try {
-            // Basic permission check (future expansion)
+            // Build permission context
+            const permissionContext: PermissionContext = {
+                userId: ctx.userId,
+                guildId: ctx.guildId,
+                userRoleIds: ctx.options.__userRoles || [],
+                channelId: ctx.channelId,
+                metadata: {
+                    commandId: id,
+                    options: ctx.options
+                }
+            };
+
+            // Check new permission system first
+            if (mod.meta.permissions?.requiredPermissions || mod.meta.permissions?.valuePermissions || mod.meta.permissions?.adminOnly) {
+                const permissionRequest: PermissionRequest = {
+                    commandPermission: mod.meta.permissions.requiredPermissions?.[0] || `command.${id}`,
+                    valuePermissions: [],
+                    requiredTags: mod.meta.tags,
+                    reason: `Executing command ${id}`
+                };
+
+                // Add value permissions based on command arguments
+                if (mod.meta.permissions.valuePermissions) {
+                    for (const [argName, permissions] of Object.entries(mod.meta.permissions.valuePermissions)) {
+                        if (ctx.options[argName] !== undefined) {
+                            permissionRequest.valuePermissions?.push(...permissions);
+                        }
+                    }
+                }
+
+                // Check admin-only commands
+                if (mod.meta.permissions.adminOnly) {
+                    permissionRequest.commandPermission = 'admin';
+                }
+
+                const evalResult = await permissionEvaluator.evaluate(permissionContext, permissionRequest);
+
+                if (!evalResult.granted) {
+                    // Log the permission denial
+                    log.warning(`Permission denied for command execution`, 'CommandRegistry', 
+                        JSON.stringify({
+                            userId: ctx.userId,
+                            guildId: ctx.guildId,
+                            commandId: id,
+                            reason: evalResult.reason,
+                            checkedPermissions: evalResult.checkedPermissions
+                        })
+                    );
+
+                    if (evalResult.requiresEphemeralGrant) {
+                        // Create ephemeral permission request
+                        try {
+                            const ephemeralRequest = await ephemeralPermissionManager.createPermissionRequest(
+                                permissionContext,
+                                permissionRequest,
+                                id,
+                                evalResult.reason || 'Permission denied'
+                            );
+
+                            return {
+                                ok: false,
+                                error: 'EPHEMERAL_PERMISSION_REQUIRED',
+                                message: `Permission required. Administrators have been notified. Request ID: ${ephemeralRequest.id}`,
+                                data: {
+                                    requestId: ephemeralRequest.id,
+                                    requiredPermissions: evalResult.checkedPermissions
+                                }
+                            };
+                        } catch (ephemeralError) {
+                            // If ephemeral request creation fails (e.g., silenced), return regular denial
+                            return {
+                                ok: false,
+                                error: 'PERMISSION_DENIED',
+                                message: ephemeralError instanceof Error ? ephemeralError.message : 'Permission denied'
+                            };
+                        }
+                    } else {
+                        return {
+                            ok: false,
+                            error: 'PERMISSION_DENIED',
+                            message: evalResult.reason || 'You do not have permission to execute this command',
+                            data: {
+                                checkedPermissions: evalResult.checkedPermissions,
+                                source: evalResult.source
+                            }
+                        };
+                    }
+                }
+
+                // Log successful permission grant
+                log.info(`Permission granted for command execution`, 'CommandRegistry', 
+                    JSON.stringify({
+                        userId: ctx.userId,
+                        guildId: ctx.guildId,
+                        commandId: id,
+                        source: evalResult.source,
+                        state: evalResult.state
+                    })
+                );
+            }
+
+            // Legacy permission check (for backward compatibility)
             if (mod.meta.permissions?.requiredRoles && !ctx.options.__userRoles) {
                 return { ok: false, error: 'MISSING_ROLES', message: 'Role information not provided' };
             }
 
             return await mod.execute(ctx);
         } catch (err: any) {
+            log.error(`Error executing command ${id}`, 'CommandRegistry',
+                JSON.stringify({
+                    error: err.message,
+                    stack: err.stack,
+                    userId: ctx.userId,
+                    guildId: ctx.guildId
+                })
+            );
+
             return { ok: false, error: err?.message || 'UNKNOWN_ERROR' };
         }
     }
