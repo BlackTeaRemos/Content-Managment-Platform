@@ -1,4 +1,9 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, SlashCommandSubcommandBuilder, MessageFlags } from 'discord.js';
+import {
+    SlashCommandBuilder,
+    ChatInputCommandInteraction,
+    SlashCommandSubcommandBuilder,
+    MessageFlags,
+} from 'discord.js';
 import { readdirSync, lstatSync } from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
@@ -57,6 +62,22 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (handler) {
         await handler(interaction);
     } else {
-        await interaction.reply({ content: 'Unknown subcommand', flags: MessageFlags.Ephemeral }).catch(() => undefined);
+        await interaction
+            .reply({ content: 'Unknown subcommand', flags: MessageFlags.Ephemeral })
+            .catch(() => undefined);
     }
 }
+
+export const permissionTokens = async (interaction: ChatInputCommandInteraction) => {
+    const group = interaction.options.getSubcommandGroup(false) ?? '';
+    const sub = interaction.options.getSubcommand(true) ?? '';
+    const tokens: string[] = [];
+    if (group && sub) {
+        tokens.push(`object:${group}:${sub}`);
+    }
+    if (group) {
+        tokens.push(`object:${group}`);
+    }
+    tokens.push('object');
+    return tokens;
+};

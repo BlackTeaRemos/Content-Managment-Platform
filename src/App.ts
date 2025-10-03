@@ -16,10 +16,8 @@ import { onReady } from './Events/Ready.js';
 import { onInteractionCreate } from './Events/InteractionCreate.js';
 import { onMessageCreate } from './Events/MessageCreate.js';
 import { commands as loadedCommands, commandsReady } from './Commands/index.js';
-/**
- * Logger instance, uses Sapphire Logger if available, otherwise falls back to console.log with info/error methods.
- * @type {{ info: (msg: string) => void, error: (msg: string|Error) => void }}
- */
+import { bootDiscordClient } from './App/Boot.js';
+import { initDiscord } from './App/DiscordInit.js';
 
 // Supported log levels with numeric severity (lower is more verbose)
 const LOG_LEVELS = { debug: 0, info: 1, warn: 2, error: 3 } as const;
@@ -96,110 +94,33 @@ export class DiscordApp {
      */
     private async __boot(): Promise<void> {
         try {
-            const configPath = process.env.CONFIG_PATH || `./config/config.json`; // [// config file path]
-            const config: ValidatedConfig = await this._configService.Load(configPath);
-
-            const path = await import(`node:path`);
-            const baseUserDirectory =
-                process.env.NODE_ENV === `production`
-                    ? path.join(process.cwd(), `cmp`)
-                    : path.join(process.cwd(), `src`);
-
-            // Create a Discord.js client
-            const client = new Client({
-                intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+            const { client, config } = await bootDiscordClient({
+                eventBus: this.eventBus,
+                configService: this._configService,
+                loadedCommands,
+                commandsReady,
+                onInteractionCreate,
+                onMessageCreate,
             });
 
-            // Store client
             this._client = client;
 
-            // Add event listeners BEFORE login to avoid missing early events
-            client.on('interactionCreate', onInteractionCreate);
-            client.on('messageCreate', onMessageCreate);
-
-            // Some environments use a legacy 'clientReady' event; others use Discord.js Events.ClientReady or 'ready'.
-            // Guard to avoid double execution if more than one fires.
-            let didReady = false;
-            let readyTimeout: NodeJS.Timeout | undefined;
-            const handleReady = async () => {
-                if (didReady) return;
-                didReady = true;
-                if (readyTimeout) {
-                    clearTimeout(readyTimeout);
-                    readyTimeout = undefined;
-                }
-                this.eventBus.emit('output', '[Startup] Ready handler invoked. Beginning command registration...');
-                // Ensure command discovery has completed before registration
-                await commandsReady;
-                // Clear existing commands before re-registration and then register in onReady
-                try {
-                    await this.__wipeAllApplicationCommands(client, config);
-
-                    const commandData = Object.values(loadedCommands).map(cmd => cmd.data.toJSON());
-                    this.eventBus.emit('output', `Prepared ${commandData.length} commands for registration.`);
-
-                    // Register commands: use guild scope if configured, otherwise global
-                    if (config.discordGuildId) {
-                        try {
-                            const registeredGuild = await client.application!.commands.set(
-                                commandData,
-                                config.discordGuildId,
-                            );
-                            this.eventBus.emit(
-                                'output',
-                                `Registered ${registeredGuild.size ?? commandData.length} guild commands to guild ${config.discordGuildId}.`,
-                            );
-                        } catch (err) {
-                            this.eventBus.emit('output', `Guild command registration failed: ${String(err)}`);
-                        }
-                    } else {
-                        try {
-                            const registeredGlobal = await client.application!.commands.set(commandData);
-                            this.eventBus.emit(
-                                'output',
-                                `Registered ${registeredGlobal.size ?? commandData.length} global commands.`,
-                            );
-                        } catch (err) {
-                            this.eventBus.emit('output', `Global command registration failed: ${String(err)}`);
-                        }
-                    }
-                } catch (err) {
-                    this.eventBus.emit('output', `Command registration failed in ready handler: ${String(err)}`);
-                }
-            };
-
-            client.once(Events.ClientReady, handleReady);
-
-            await client.login(config.discordToken);
-
-            // Register error logging
-            client.on(`error`, err => {
-                log.error(`Client error: ${err}`, `App`);
+            // Initialize the higher-level DiscordService and wire additional listeners
+            const discord = initDiscord({
+                eventBus: this.eventBus,
+                client: client,
+                config,
+                setCmdChannelId: id => {
+                    this._cmdChannelId = id;
+                },
             });
 
-            // After login, emit logged-in
-            this.eventBus.emit('output', `Discord.js client logged in.`);
+            if (discord) {
+                this._discordService = discord;
+            }
 
-            // Handle interactions
-            client.on('interactionCreate', async interaction => {
-                if (!interaction.isChatInputCommand()) return;
-                const command = loadedCommands[interaction.commandName];
-                if (!command) return;
-                try {
-                    // Execute command and let it handle replies
-                    await command.execute(interaction);
-                } catch (err) {
-                    log.error(`Error executing command ${interaction.commandName}: ${err}`, 'App');
-                    if (!interaction.replied && !interaction.deferred) {
-                        await interaction.reply({
-                            content: 'There was an error while executing this command!',
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    }
-                }
-            });
-
-            this.__initConfigAndDiscord(config);
+            // Keep original lightweight output after login
+            this.eventBus.emit('output', 'Boot completed.');
         } catch (err) {
             this.eventBus.emit(`output`, `Fatal boot error: ${err}`);
             throw err;
@@ -231,94 +152,29 @@ export class DiscordApp {
         this.__initDiscord(config);
     }
 
-    /**
-     * Initializes DiscordService and wires up Discord events.
-     * @param config any - Loaded config object
-     * @private
-     */
+    // Keep a thin compatibility wrapper that delegates to the new init module when present
     private __initDiscord(config: any): void {
-        // Validate config structure
-        this.eventBus.emit(`output`, `[TRACE] Entered __initDiscord: about to validate config structure.`);
+        this.eventBus.emit(`output`, `[TRACE] Entered __initDiscord (delegating to DiscordInit)`);
 
-        if (!config.discordToken || !config.discordGuildId || !config.discordCategoryId) {
-            this.eventBus.emit(
-                `output`,
-                `[TRACE] Config validation failed: missing discordToken, discordGuildId, or discordCategoryId.`,
-            );
-            this.eventBus.emit(`output`, `Missing discordToken, discordGuildId, or discordCategoryId in config.`);
+        if (!config || !this._client) {
+            this.eventBus.emit(`output`, `[TRACE] __initDiscord skipped: missing config or client.`);
             return;
         }
 
-        this.eventBus.emit(`output`, `[TRACE] Config validated, about to create DiscordService instance.`);
-        const discordClient = this._client!;
-        const discord = new DiscordService(
-            discordClient,
-            config.discordGuildId,
-            config.discordCategoryId,
-            config.discordToken,
-        );
-        this.eventBus.emit(`output`, `[TRACE] DiscordService instance created with SapphireClient, storing reference.`);
+        // If the DiscordService has already been created (e.g. during boot), skip creating a new one.
+        if (this._discordService) {
+            this.eventBus.emit(`output`, `[TRACE] DiscordService already initialized.`);
+            return;
+        }
 
-        this._discordService = discord;
-        this.eventBus.on(`discord:ready`, async (_client, category, channels) => {
-            this.eventBus.emit(`output`, `Connected to Discord API.`);
-            this.eventBus.emit(`output`, `Category: ${category.name} (#${category.id})`);
-            this.eventBus.emit(`output`, `Found ${channels.length} folder(s):`);
-
-            for (const ch of channels) {
-                this.eventBus.emit(`output`, `- #${ch.name} (${ch.id})`);
-
-                try {
-                    const messages = await ch.messages.fetch({ limit: 5 });
-
-                    if (messages.size > 0) {
-                        this.eventBus.emit(`output`, `  Last ${messages.size} messages:`);
-                        messages.reverse().forEach((msg: any) => {
-                            this.eventBus.emit(`output`, `    [${msg.author?.username}] ${msg.content}`);
-                        });
-                    } else {
-                        this.eventBus.emit(`output`, `  (No messages)`);
-                    }
-                } catch (err) {
-                    this.eventBus.emit(`output`, `[App]   Failed to fetch messages: ${err}`);
-                }
-
-                if (ch.name.startsWith(`cmd-`)) {
-                    this._cmdChannelId = ch.id;
-                }
-            }
-
-            const guildId = category.guild.id;
-        });
-        this.eventBus.on(`discord:error`, err => {
-            this.eventBus.emit(`output`, `Discord error: ${err}`);
+        const discord = initDiscord({
+            eventBus: this.eventBus,
+            client: this._client,
+            config,
+            setCmdChannelId: id => (this._cmdChannelId = id),
         });
 
-        this.eventBus.on(`discord:message:raw`, (msg: any) => {
-            // Ignore messages sent by the bot itself
-            if (
-                this._discordService &&
-                this._discordService.client &&
-                msg.author &&
-                msg.author.id === this._discordService.client.user?.id
-            ) {
-                return;
-            }
-
-            if (this._cmdChannelId && msg.channel.id === this._cmdChannelId) {
-                if (msg.content && msg.content.trim().startsWith(`/`)) {
-                    this.eventBus.emit(
-                        `output`,
-                        `Legacy "/"-prefixed commands are no longer supported. Use Discord slash commands instead.`,
-                    );
-                    return;
-                }
-
-                // No parsing for non-slash messages
-            } else {
-                this.eventBus.emit(`output`, `[Discord] ${msg.author?.username}: ${msg.content}`);
-            }
-        });
+        if (discord) this._discordService = discord;
     }
 
     /**
