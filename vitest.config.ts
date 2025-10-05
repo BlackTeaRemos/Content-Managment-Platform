@@ -16,7 +16,7 @@ export default defineConfig({
     },
     test: {
         root: ROOT,
-        dir: path.resolve(ROOT, 'test'),
+        dir: path.resolve(ROOT, 'src'),
         include: ['**/*.test.ts'],
         exclude: ['**/node_modules/**', '**/cmp/**'],
         watch: false,

@@ -1,5 +1,6 @@
 import { ChatInputCommandInteraction } from 'discord.js';
 import { CommandExecutionContext, createExecutionContext } from '../Domain/index.js';
+import { flowManager } from './Flow/Manager.js';
 
 /**
  * Utility functions to help bridge between Discord.js commands and the execution context system.
@@ -88,7 +89,6 @@ export async function executeWithContext(
     correlationId?: string,
 ): Promise<void> {
     const executionContext = createExecutionContext(correlationId);
-    const { flowManager } = await import('../Flow/FlowManager.js');
 
     await flowBuilderFn(flowManager, executionContext);
 }

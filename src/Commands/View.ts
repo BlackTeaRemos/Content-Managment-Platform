@@ -1,21 +1,36 @@
 import {
     SlashCommandBuilder,
     ActionRowBuilder,
-    EmbedBuilder,
     ChatInputCommandInteraction,
     StringSelectMenuBuilder,
     MessageFlags,
 } from 'discord.js';
-import { flowManager } from '../Flow/FlowManager.js';
-import { neo4jClient } from '../Setup/Neo4j.js';
-import { getGame } from '../Flow/Object/Game/View.js';
+import { flowManager } from '../Common/Flow/Manager.js';
 import { executeWithContext } from '../Common/ExecutionContextHelpers.js';
+import { getSupportedTypes, listRecordsFor, buildEmbedFor } from '../Common/Flow/ObjectRegistry.js';
+import { neo4jClient } from '../Setup/Neo4j.js';
 
 export const data = new SlashCommandBuilder().setName('view').setDescription('Interactive view of stored objects');
 
 interface State {
     type?: string;
     id?: string;
+    orgUid?: string; // selected organization for description context
+}
+
+// Ensure select menu options have unique values and fit Discord constraints
+function uniqueSelectOptions<T extends { value: string }>(options: T[], max = 25): T[] {
+    const seen = new Set<string>();
+    const out: T[] = [];
+    for (const o of options) {
+        const v = (o.value ?? '').toString();
+        if (!v) continue; // skip empty values
+        if (seen.has(v)) continue;
+        seen.add(v);
+        out.push(o);
+        if (out.length >= max) break;
+    }
+    return out;
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -24,13 +39,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .builder(interaction.user.id, interaction, {} as State, executionContext)
             .step('select_type')
             .prompt(async (ctx: any) => {
-                const options = [
-                    { label: 'Games', value: 'game' },
-                    { label: 'Organizations', value: 'organization' },
-                    { label: 'Users', value: 'user' },
-                    { label: 'Factories', value: 'building' },
-                    { label: 'Descriptions', value: 'description' },
-                ];
+                const options = uniqueSelectOptions(getSupportedTypes());
                 const select = new StringSelectMenuBuilder()
                     .setCustomId('select_type')
                     .setPlaceholder('Select object type')
@@ -50,22 +59,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .step('select_object')
             .prompt(async (ctx: any) => {
                 const type = ctx.state.type!;
-                let records: Array<{ uid: string; label: string }> = [];
-                const session = await neo4jClient.GetSession('READ');
-                try {
-                    const queryMap: Record<string, string> = {
-                        game: 'MATCH (g:Game) RETURN g.uid AS uid, g.name AS label',
-                        organization: 'MATCH (o:Organization) RETURN o.uid AS uid, o.name AS label',
-                        user: 'MATCH (u:User) RETURN u.uid AS uid, u.discord_id AS label',
-                        building: 'MATCH (f:Factory) RETURN f.uid AS uid, f.type AS label',
-                        description: 'MATCH (d:Description) RETURN d.uid AS uid, d.text AS label',
-                    };
-                    const result = await session.run(queryMap[type]);
-                    records = result.records.map(r => ({ uid: r.get('uid'), label: r.get('label') }));
-                } finally {
-                    await session.close();
-                }
-                const options = records.map(r => ({ label: r.label.toString().slice(0, 50), value: r.uid.toString() }));
+                const records = await listRecordsFor(type as any);
+                const options = uniqueSelectOptions(
+                    records.map(r => ({ label: r.label.toString().slice(0, 50), value: r.uid.toString() })),
+                );
                 const select = new StringSelectMenuBuilder()
                     .setCustomId('select_object')
                     .setPlaceholder('Select object to view')
@@ -82,20 +79,61 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 return true;
             })
             .next()
+            .step('select_view_org')
+            .prompt(async (ctx: any) => {
+                // For objects that support descriptions, select organization per rules
+                const describable = ['game', 'organization', 'user', 'building'];
+                if (!describable.includes(ctx.state.type)) {
+                    await ctx.advance();
+                    return;
+                }
+                const session = await neo4jClient.GetSession('READ');
+                try {
+                    const res = await session.run(
+                        'MATCH (u:User { discord_id: $discordId })-[:BELONGS_TO]->(o:Organization) RETURN o.uid AS uid, o.name AS name',
+                        { discordId: (interaction as ChatInputCommandInteraction).user.id },
+                    );
+                    const orgs = res.records.map((r: any) => ({
+                        uid: String(r.get('uid')),
+                        name: String(r.get('name')),
+                    }));
+                    if (orgs.length === 0) {
+                        // No orgs: use public/general later by passing empty orgUid
+                        ctx.state.orgUid = '';
+                        await ctx.advance();
+                        return;
+                    }
+                    if (orgs.length === 1) {
+                        ctx.state.orgUid = orgs[0].uid;
+                        await ctx.advance();
+                        return;
+                    }
+                    const orgOptions: Array<{ label: string; value: string }> = uniqueSelectOptions(
+                        orgs.map((o: { uid: string; name: string }) => ({ label: o.name.slice(0, 50), value: o.uid })),
+                    );
+                    const select = new StringSelectMenuBuilder()
+                        .setCustomId('select_view_org')
+                        .setPlaceholder('Select organization context for description')
+                        .addOptions(orgOptions);
+                    await (interaction as ChatInputCommandInteraction).editReply({
+                        components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select)],
+                    });
+                } finally {
+                    await session.close();
+                }
+            })
+            .onInteraction(async (ctx: any, interaction: any) => {
+                if (!interaction.isStringSelectMenu()) return false;
+                ctx.state.orgUid = interaction.values[0];
+                await interaction.deferUpdate();
+                return true;
+            })
+            .next()
             .step('show_details')
             .prompt(async (ctx: any) => {
                 const type = ctx.state.type!;
                 const id = ctx.state.id!;
-                let embed = new EmbedBuilder().setTitle('Details').setColor('Blue');
-                if (type === 'game') {
-                    const g = await getGame(id);
-                    embed
-                        .addFields({ name: 'UID', value: g?.uid ?? 'n/a', inline: true })
-                        .addFields({ name: 'Name', value: g?.name ?? 'n/a', inline: true })
-                        .addFields({ name: 'Server', value: g?.serverId ?? 'n/a', inline: true });
-                } else {
-                    embed.setDescription(`Viewing for type ${type} not implemented.`);
-                }
+                const embed = await buildEmbedFor(type as any, id, ctx.state.orgUid);
                 await (interaction as ChatInputCommandInteraction).followUp({
                     embeds: [embed],
                     flags: MessageFlags.Ephemeral,

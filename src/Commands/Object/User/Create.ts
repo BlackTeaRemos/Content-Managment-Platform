@@ -9,7 +9,7 @@ import {
     MessageFlags,
 } from 'discord.js';
 import { createUser } from '../../../Flow/Object/User/Create.js';
-import { flowManager } from '../../../Flow/FlowManager.js';
+import { flowManager } from '../../../Common/Flow/Manager.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 import type { ExecutionContext } from '../../../Domain/index.js';
 
