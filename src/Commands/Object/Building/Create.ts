@@ -10,7 +10,7 @@ import {
 } from 'discord.js';
 import { createFactory } from '../../../Flow/Object/Building/Create.js';
 import { log } from '../../../Common/Log.js';
-import { flowManager } from '../../../Flow/FlowManager.js';
+import { flowManager } from '../../../Common/Flow/Manager.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 import type { ExecutionContext } from '../../../Domain/index.js';
 

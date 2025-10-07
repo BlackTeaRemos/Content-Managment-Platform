@@ -69,3 +69,34 @@ export async function getUserByDiscordId(discordId: string): Promise<ViewUser | 
         await session.close();
     }
 }
+
+/**
+ * Retrieve a single user by UID
+ * @param uid The UID to lookup
+ * @returns The user properties or null if not found
+ */
+export async function getUserByUid(uid: string): Promise<ViewUser | null> {
+    const session = await neo4jClient.GetSession('READ');
+    try {
+        const res = await session.run(
+            `
+            MATCH (u:User { uid: $uid })
+            RETURN u
+            `,
+            { uid },
+        );
+        if (res.records.length === 0) {
+            return null;
+        }
+        const props = res.records[0].get('u').properties;
+        return {
+            uid: props.uid,
+            discord_id: props.discord_id,
+            name: props.name,
+            friendly_name: props.friendly_name,
+            id: props.id,
+        };
+    } finally {
+        await session.close();
+    }
+}

@@ -10,7 +10,8 @@ import {
 } from 'discord.js';
 import { createGame } from '../../../Flow/Object/Game/Create.js';
 import { uploadGameImage } from '../../../Flow/Object/Game/Upload.js';
-import { flowManager, FlowStep } from '../../../Flow/FlowManager.js';
+import { flowManager } from '../../../Common/Flow/Manager.js';
+import type { FlowStep } from '../../../Common/Flow/Types.js';
 import type { Interaction } from 'discord.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 import type { ExecutionContext } from '../../../Domain/index.js';

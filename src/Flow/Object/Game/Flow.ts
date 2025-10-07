@@ -1,14 +1,5 @@
-import { Game } from './Create.js';
-
 /**
- * State for interactive game creation per user
+ * Legacy game creation flow state has been removed.
+ * Consumers should rely on the shared FlowManager-based workflows instead.
  */
-export interface GameCreationState {
-    serverId: string;
-    gameName?: string;
-}
-
-/**
- * Map of userId to state
- */
-export const gameCreationStates = new Map<string, GameCreationState>();
+export const removedGameFlowModule = Symbol('game-flow-removed');
