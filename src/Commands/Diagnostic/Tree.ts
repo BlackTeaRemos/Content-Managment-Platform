@@ -13,6 +13,8 @@ export const data = new SlashCommandBuilder()
     .setDescription('Diagnostic commands')
     .addSubcommand(sub => sub.setName('tree').setDescription('List all registered commands'));
 
+export const permissionTokens = 'diagnostic:tree';
+
 export async function execute(interaction: ChatInputCommandInteraction) {
     const ctx = createCommandContext(interaction);
     const sub = interaction.options.getSubcommand(true);
