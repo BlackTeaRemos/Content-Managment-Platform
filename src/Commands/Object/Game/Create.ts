@@ -32,6 +32,8 @@ export const data = new SlashCommandSubcommandBuilder()
     .setName('create')
     .setDescription('Start interactive game creation flow');
 
+export const permissionTokens = 'object:game:create';
+
 export async function execute(interaction: ChatInputCommandInteraction) {
     const serverId = interaction.guildId;
     if (!serverId) {
