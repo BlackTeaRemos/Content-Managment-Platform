@@ -39,26 +39,25 @@ export async function createDescriptionVersion(
                 isPublic: false
             })
             WITH d
+            WITH d
             CALL {
                 WITH d
-                WITH d WHERE $refType = 'organization'
                 MATCH (o:Organization { uid: $refUid })
+                WHERE $refType = 'organization'
                 MERGE (o)-[:HAS_DESCRIPTION]->(d)
-                RETURN d
-            }
-            CALL {
+                RETURN 1 AS linked
+                UNION
                 WITH d
-                WITH d WHERE $refType = 'game'
                 MATCH (g:Game { uid: $refUid })
+                WHERE $refType = 'game'
                 MERGE (g)-[:HAS_DESCRIPTION]->(d)
-                RETURN d
-            }
-            CALL {
+                RETURN 1 AS linked
+                UNION
                 WITH d
-                WITH d WHERE $refType = 'user'
                 MATCH (u:User { uid: $refUid })
+                WHERE $refType = 'user'
                 MERGE (u)-[:HAS_DESCRIPTION]->(d)
-                RETURN d
+                RETURN 1 AS linked
             }
             RETURN d`;
 

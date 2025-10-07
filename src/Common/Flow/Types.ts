@@ -11,6 +11,11 @@ export interface FlowStep<State> {
      */
     customId?: string; // optional component id to match interactions
     /**
+     * Optional human-readable tag for referencing this step from later steps. Must be unique per flow definition.
+     * @example 'selectOrganization'
+     */
+    tag?: string;
+    /**
      * Handler invoked when this step is activated. Should send prompts (embeds, components) via interaction or message.
      * @example prompts the user with a message and buttons
      */
@@ -38,4 +43,24 @@ export interface StepContext<State> {
     cancel: () => Promise<void>; // cancel the flow
     /** Execution context for caching and shared state across flow steps */
     executionContext?: ExecutionContext;
+    /** Tag assigned to the current step, if any */
+    tag?: string;
+    /** Store arbitrary data for the current step so later tagged steps can reuse it */
+    remember: (key: string, value: unknown) => void;
+    /** Retrieve stored data from a previous tagged step */
+    recall: <T = unknown>(tag: string, key: string) => T | undefined;
+    /** Retrieve the recorded details for a previous tagged step */
+    getStep: (tag: string) => StepSnapshot<State> | undefined;
+}
+
+/**
+ * Snapshot describing a previously executed tagged step.
+ */
+export interface StepSnapshot<State> {
+    tag: string;
+    stepIndex: number;
+    data: Record<string, unknown>;
+    lastInteraction?: Interaction;
+    lastMessage?: Message;
+    state: State;
 }

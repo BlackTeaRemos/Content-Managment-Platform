@@ -1,4 +1,4 @@
-import { log } from './Common/Log.js';
+import { log, LogLevel } from './Common/Log.js';
 /**
  * Entry point for the application. Sets up and starts the main app logic, including initialization of services and event listeners.
  */
@@ -16,6 +16,7 @@ import { onReady } from './Events/Ready.js';
 import { onInteractionCreate } from './Events/InteractionCreate.js';
 import { onMessageCreate } from './Events/MessageCreate.js';
 import { commands as loadedCommands, commandsReady } from './Commands/index.js';
+import { flowManager } from './Common/Flow/Manager.js';
 /**
  * Logger instance, uses Sapphire Logger if available, otherwise falls back to console.log with info/error methods.
  * @type {{ info: (msg: string) => void, error: (msg: string|Error) => void }}
@@ -171,6 +172,8 @@ export class DiscordApp {
             client.once(Events.ClientReady, handleReady);
 
             await client.login(config.discordToken);
+
+            flowManager.enableLogging({ level: LogLevel.Debug, source: 'Flow' });
 
             // Register error logging
             client.on(`error`, err => {

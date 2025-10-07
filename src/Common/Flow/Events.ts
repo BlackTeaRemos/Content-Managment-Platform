@@ -38,6 +38,8 @@ export const flowCancelId = (userId: string): FlowEventId => [FLOW_NAMESPACE, us
 export const anyStepPromptId: FlowEventId = [FLOW_NAMESPACE, undefined, 'step', undefined, 'prompt'];
 export const anyStepInteractionId: FlowEventId = [FLOW_NAMESPACE, undefined, 'step', undefined, 'interaction'];
 export const anyStepMessageId: FlowEventId = [FLOW_NAMESPACE, undefined, 'step', undefined, 'message'];
+export const anyAdvanceId: FlowEventId = [FLOW_NAMESPACE, undefined, 'advance'];
+export const anyCancelId: FlowEventId = [FLOW_NAMESPACE, undefined, 'cancel'];
 
 // Payloads carried through the event bus. These are runtime-validated by usage; typings here are for developer guidance.
 

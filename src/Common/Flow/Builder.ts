@@ -16,6 +16,7 @@ import { StepBuilder } from './StepBuilder.js';
  */
 export class FlowBuilder<State> {
     private steps: FlowStep<State>[] = [];
+    private usedTags = new Set<string>();
 
     constructor(
         private manager: FlowManager,
@@ -26,12 +27,13 @@ export class FlowBuilder<State> {
     ) {}
 
     /**
-     * Add a new step with an optional component custom id.
+     * Add a new step with an optional component custom id and tag.
      * @param customId string | undefined Custom id to match for component interactions. Example 'select_type'.
+     * @param tag string | undefined Unique tag identifier that allows later steps to recall this step's context. Example 'selectOrganization'.
      * @returns StepBuilder<State> Step builder for configuring the step. Example builder.step('select').
      */
-    public step(customId?: string): StepBuilder<State> {
-        return new StepBuilder(this, customId);
+    public step(customId?: string, tag?: string): StepBuilder<State> {
+        return new StepBuilder(this, customId, tag);
     }
 
     /**
@@ -40,6 +42,12 @@ export class FlowBuilder<State> {
      * @returns void Step is stored internally; call chaining is performed by StepBuilder.next().
      */
     public internalAddStep(step: FlowStep<State>) {
+        if (step.tag) {
+            if (this.usedTags.has(step.tag)) {
+                throw new Error(`Duplicate flow step tag detected: ${step.tag}`);
+            }
+            this.usedTags.add(step.tag);
+        }
         this.steps.push(step);
     }
 

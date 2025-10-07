@@ -1,6 +1,6 @@
 import type { Interaction, Message } from 'discord.js';
 import type { ExecutionContext } from '../../Domain/Command.js';
-import type { FlowStep, StepContext } from './Types.js';
+import type { FlowStep, StepContext, StepSnapshot } from './Types.js';
 import { flowAdvanceId, flowCancelId, flowStepInteractionId, flowStepMessageId, flowStepPromptId } from './Events.js';
 import { FlowManager } from './Manager.js';
 
@@ -10,6 +10,7 @@ import { FlowManager } from './Manager.js';
 export class FlowInstance<State> {
     private current = 0; // zero-based current step index
     private initialInteraction: Interaction; // initial interaction used to send first prompt
+    private historyByTag = new Map<string, StepSnapshot<State>>();
 
     constructor(
         private userId: string,
@@ -37,14 +38,10 @@ export class FlowInstance<State> {
     private async promptCurrent() {
         const step = this.steps[this.current];
         if (step) {
-            const ctx: StepContext<State> = {
-                userId: this.userId,
-                state: this.state,
-                interaction: this.initialInteraction,
-                advance: this.advance.bind(this),
-                cancel: this.cancel.bind(this),
-                executionContext: this.executionContext,
-            };
+            if (step.tag) {
+                this.ensureSnapshot(step, this.current);
+            }
+            const ctx = this.buildContext(step, this.current, this.initialInteraction);
             this.manager.events.emitEvent(flowStepPromptId(this.userId, this.current), {
                 userId: this.userId,
                 stepIndex: this.current,
@@ -63,14 +60,11 @@ export class FlowInstance<State> {
         const step = this.steps[this.current];
         if (!step) return;
         if (step.customId && 'customId' in interaction && (interaction as any).customId === step.customId) {
-            const ctx: StepContext<State> = {
-                userId: this.userId,
-                state: this.state,
-                interaction,
-                advance: this.advance.bind(this),
-                cancel: this.cancel.bind(this),
-                executionContext: this.executionContext,
-            };
+            const snapshot = step.tag ? this.ensureSnapshot(step, this.current) : undefined;
+            const ctx = this.buildContext(step, this.current, interaction);
+            if (snapshot) {
+                snapshot.lastInteraction = interaction;
+            }
             this.manager.events.emitEvent(flowStepInteractionId(this.userId, this.current), {
                 userId: this.userId,
                 stepIndex: this.current,
@@ -90,13 +84,11 @@ export class FlowInstance<State> {
         const step = this.steps[this.current];
         if (!step) return;
         if (step.handleMessage) {
-            const ctx: StepContext<State> = {
-                userId: this.userId,
-                state: this.state,
-                advance: this.advance.bind(this),
-                cancel: this.cancel.bind(this),
-                executionContext: this.executionContext,
-            };
+            const snapshot = step.tag ? this.ensureSnapshot(step, this.current) : undefined;
+            const ctx = this.buildContext(step, this.current);
+            if (snapshot) {
+                snapshot.lastMessage = message;
+            }
             this.manager.events.emitEvent(flowStepMessageId(this.userId, this.current), {
                 userId: this.userId,
                 stepIndex: this.current,
@@ -114,13 +106,7 @@ export class FlowInstance<State> {
     private async advance() {
         const from = this.current;
         this.current++;
-        const ctx: StepContext<State> = {
-            userId: this.userId,
-            state: this.state,
-            advance: this.advance.bind(this),
-            cancel: this.cancel.bind(this),
-            executionContext: this.executionContext,
-        };
+        const ctx = this.buildContext();
         this.manager.events.emitEvent(flowAdvanceId(this.userId), {
             userId: this.userId,
             fromStepIndex: from,
@@ -138,17 +124,69 @@ export class FlowInstance<State> {
      * @returns Promise<void> Resolves after the cancel event fires. Example await ctx.cancel().
      */
     public async cancel() {
-        const ctx: StepContext<State> = {
-            userId: this.userId,
-            state: this.state,
-            advance: this.advance.bind(this),
-            cancel: this.cancel.bind(this),
-            executionContext: this.executionContext,
-        };
+        const ctx = this.buildContext();
         this.manager.events.emitEvent(flowCancelId(this.userId), {
             userId: this.userId,
             ctx,
         });
         this.manager.internalRemove(this.userId);
+    }
+
+    private buildContext(
+        step?: FlowStep<State>,
+        stepIndex = this.current,
+        interaction?: Interaction,
+    ): StepContext<State> {
+        const guardIndex = step ? stepIndex : this.current;
+        const getStep = (tag: string): StepSnapshot<State> | undefined => {
+            const entry = this.historyByTag.get(tag);
+            if (!entry) return undefined;
+            if (entry.stepIndex >= guardIndex) return undefined;
+            return entry;
+        };
+        const recall = <T = unknown>(tag: string, key: string): T | undefined => {
+            const entry = getStep(tag);
+            if (!entry) return undefined;
+            return entry.data[key] as T | undefined;
+        };
+        const remember = (key: string, value: unknown): void => {
+            if (!step || !step.tag) {
+                throw new Error('Cannot store data for an untagged step. Provide a tag when defining this step.');
+            }
+            const snapshot = this.ensureSnapshot(step, stepIndex);
+            snapshot.data[key] = value;
+        };
+        return {
+            userId: this.userId,
+            state: this.state,
+            interaction,
+            advance: this.advance.bind(this),
+            cancel: this.cancel.bind(this),
+            executionContext: this.executionContext,
+            tag: step?.tag,
+            remember,
+            recall,
+            getStep,
+        };
+    }
+
+    private ensureSnapshot(step: FlowStep<State>, stepIndex: number): StepSnapshot<State> {
+        if (!step.tag) {
+            throw new Error('Cannot capture snapshot for step without a tag.');
+        }
+        let snapshot = this.historyByTag.get(step.tag);
+        if (!snapshot) {
+            snapshot = {
+                tag: step.tag,
+                stepIndex,
+                data: {},
+                state: this.state,
+            };
+            this.historyByTag.set(step.tag, snapshot);
+        } else {
+            snapshot.stepIndex = stepIndex;
+            snapshot.state = this.state;
+        }
+        return snapshot;
     }
 }

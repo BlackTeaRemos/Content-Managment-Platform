@@ -3,7 +3,7 @@ import type { ExecutionContext } from '../../Domain/Command.js';
 import type { FlowStep } from './Types.js';
 import { FlowInstance } from './Instance.js';
 import { FlowBuilder } from './Builder.js';
-import { FlowEventBus } from './EventBus.js';
+import { FlowEventBus, FlowLoggingOptions } from './EventBus.js';
 
 /**
  * Coordinates interactive flows per Discord user, delegating lifecycle events through the shared event bus.
@@ -14,6 +14,15 @@ import { FlowEventBus } from './EventBus.js';
 export class FlowManager {
     private flows = new Map<string, FlowInstance<any>>();
     public readonly events = new FlowEventBus<any>();
+
+    /**
+     * Enable diagnostic logging for all flow events via the underlying event bus.
+     * @param options FlowLoggingOptions<any> Optional logging overrides (level, source, formatter). Example { level: LogLevel.Info }.
+     * @returns void No return value; listeners remain active until process exit.
+     */
+    public enableLogging(options?: FlowLoggingOptions<any>): void {
+        this.events.registerLoggingDelegates(options);
+    }
 
     /**
      * Start a new flow for the provided user, cancelling any existing flow owned by the same user.
@@ -34,10 +43,7 @@ export class FlowManager {
         if (this.flows.has(userId)) {
             await this.flows.get(userId)!.cancel();
         }
-        // Ensure default delegates are registered once per manager
-        if (this.events.getEventList().length === 0) {
-            this.events.registerDefaultDelegates();
-        }
+        this.events.registerDefaultDelegates();
         const instance = new FlowInstance(userId, initialInteraction, initialState, steps, this, executionContext);
         this.flows.set(userId, instance as FlowInstance<any>);
         await instance.start();
