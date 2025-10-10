@@ -17,6 +17,7 @@ import { neo4jClient } from '../../Setup/Neo4j.js';
 import { getLatestDescription } from '../../Flow/Object/Description/Latest.js';
 import { createDescriptionVersion } from '../../Flow/Object/Description/Update.js';
 import { log } from '../../Common/Log.js';
+import type { TokenSegmentInput } from '../../Common/permission/index.js';
 
 interface State {
     targetType?: 'organization' | 'game' | 'user';
@@ -203,6 +204,8 @@ export const data = new SlashCommandBuilder()
     .setName('description')
     .setDescription('Work with descriptions')
     .addSubcommand(s => s.setName('create').setDescription('Create or edit description for an object'));
+
+export const permissionTokens: TokenSegmentInput[][] = [['description']];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     // We support only subcommand 'create' for now

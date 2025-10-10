@@ -1,7 +1,15 @@
 import { EventEmitter } from 'events';
 import { Client, GatewayIntentBits, Events, MessageFlags } from 'discord.js';
 import { log } from '../Common/Log.js';
-import { checkPermission, grantForever, resolve as resolvePermission } from '../Flow/permission/PermissionManager.js';
+import {
+    checkPermission,
+    formatPermissionToken,
+    grantForever,
+    resolve as resolvePermission,
+    type PermissionToken,
+    type PermissionTokenInput,
+    type TokenSegmentInput,
+} from '../Common/permission/index.js';
 import { requestPermissionFromAdmin } from '../Flow/permission/PermissionUI.js';
 import type { ConfigService } from '../Services/ConfigService.js';
 
@@ -108,7 +116,7 @@ export async function bootDiscordClient(options: {
                 | ((interaction: any) => Promise<string | string[] | undefined>)
                 | undefined = cmdAny.permissionTokens ?? cmdAny.permissions ?? `command:{commandName}`;
 
-            const templates: string[] = [];
+            const templates: (string | TokenSegmentInput[])[] = [];
             if (typeof rawTemplates === 'function') {
                 try {
                     const t = await rawTemplates(interaction);
@@ -118,8 +126,13 @@ export async function bootDiscordClient(options: {
                     rawTemplates = `command:{commandName}`;
                 }
             }
-            if (typeof rawTemplates === 'string') templates.push(rawTemplates);
-            else if (Array.isArray(rawTemplates)) templates.push(...rawTemplates);
+            if (typeof rawTemplates === 'string') {
+                templates.push(rawTemplates);
+            } else if (Array.isArray(rawTemplates)) {
+                for (const entry of rawTemplates) {
+                    templates.push(entry as string | TokenSegmentInput[]);
+                }
+            }
 
             // Build resolver context
             const resolverCtx = {
@@ -130,13 +143,20 @@ export async function bootDiscordClient(options: {
             };
 
             // Resolve templates into concrete tokens (most-specific first)
-            const tokens: string[] = [];
+            const tokens: PermissionToken[] = [];
+            const seenTokens = new Set<string>();
             for (const tmpl of templates) {
                 const resolved = resolvePermission(tmpl, resolverCtx);
-                for (const r of resolved) if (!tokens.includes(r)) tokens.push(r);
+                for (const token of resolved) {
+                    const display = formatPermissionToken(token);
+                    if (seenTokens.has(display)) continue;
+                    seenTokens.add(display);
+                    tokens.push(token);
+                }
             }
 
-            const perm = await checkPermission(undefined, member, tokens.length ? tokens : [interaction.commandName]);
+            const tokensToCheck: PermissionTokenInput[] = tokens.length ? tokens : [interaction.commandName];
+            const perm = await checkPermission(undefined, member, tokensToCheck);
 
             // Not allowed immediately
             if (!perm.allowed) {
@@ -150,7 +170,8 @@ export async function bootDiscordClient(options: {
 
                     if (decision === 'approve_forever' && interaction.guildId) {
                         // grant the most specific token
-                        const grantToken = tokens && tokens.length ? tokens[0] : interaction.commandName;
+                        const grantToken: PermissionTokenInput =
+                            tokens && tokens.length ? tokens[0] : interaction.commandName;
                         grantForever(interaction.guildId, interaction.user.id, grantToken);
                     }
 

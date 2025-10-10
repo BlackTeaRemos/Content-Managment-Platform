@@ -13,6 +13,7 @@ import { log } from '../../../Common/Log.js';
 import { flowManager } from '../../../Common/Flow/Manager.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 import type { ExecutionContext } from '../../../Domain/index.js';
+import type { TokenSegmentInput } from '../../../Common/permission/index.js';
 
 interface FlowState {
     refType: 'organization' | 'game' | 'user';
@@ -30,6 +31,8 @@ type StepContext = {
 export const data = new SlashCommandSubcommandBuilder()
     .setName('create')
     .setDescription('Add a description to a reference object');
+
+export const permissionTokens: TokenSegmentInput[][] = [['object', 'description', 'create']];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     await executeWithContext(interaction, async (flowManager, executionContext) => {

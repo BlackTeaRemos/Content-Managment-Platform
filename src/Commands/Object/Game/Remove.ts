@@ -2,11 +2,14 @@ import { SlashCommandSubcommandBuilder, ChatInputCommandInteraction, MessageFlag
 import { removeGame } from '../../../Flow/Object/Game/Remove.js';
 import { log } from '../../../Common/Log.js';
 import { createCommandContext } from '../../../Common/ExecutionContextHelpers.js';
+import type { TokenSegmentInput } from '../../../Common/permission/index.js';
 
 export const data = new SlashCommandSubcommandBuilder()
     .setName('remove')
     .setDescription('Remove a game')
     .addStringOption(o => o.setName('uid').setDescription('Game UID').setRequired(true));
+
+export const permissionTokens: TokenSegmentInput[][] = [['object', 'game', 'remove']];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     const ctx = createCommandContext(interaction);

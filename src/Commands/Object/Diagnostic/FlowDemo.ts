@@ -6,10 +6,13 @@ import {
     MessageFlags,
 } from 'discord.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
+import type { TokenSegmentInput } from '../../../Common/permission/index.js';
 
 export const data = new SlashCommandSubcommandBuilder()
     .setName('flow-demo')
     .setDescription('Demonstrates execution context with interactive flows');
+
+export const permissionTokens: TokenSegmentInput[][] = [['object', 'diagnostic', 'flow-demo']];
 
 interface FlowState {
     selectedOption?: string;

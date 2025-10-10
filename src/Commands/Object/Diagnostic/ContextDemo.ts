@@ -1,9 +1,12 @@
 import { SlashCommandSubcommandBuilder, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { createCommandContext } from '../../../Common/ExecutionContextHelpers.js';
+import type { TokenSegmentInput } from '../../../Common/permission/index.js';
 
 export const data = new SlashCommandSubcommandBuilder()
     .setName('context-demo')
     .setDescription('Demonstrates execution context caching to avoid recomputation');
+
+export const permissionTokens: TokenSegmentInput[][] = [['object', 'diagnostic', 'context-demo']];
 
 /**
  * Example command demonstrating how to use ExecutionContext to avoid unnecessary recomputation.
@@ -12,7 +15,10 @@ export const data = new SlashCommandSubcommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
     const ctx = createCommandContext(interaction);
 
-    await ctx.reply({ content: 'Running expensive operations with execution context...', flags: MessageFlags.Ephemeral });
+    await ctx.reply({
+        content: 'Running expensive operations with execution context...',
+        flags: MessageFlags.Ephemeral,
+    });
 
     // Simulate an expensive database query that we want to avoid repeating
     const userData = await ctx.executionContext!.getOrCompute(`user:${ctx.userId}`, async () => {

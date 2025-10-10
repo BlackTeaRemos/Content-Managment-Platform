@@ -15,6 +15,7 @@ import type { FlowStep } from '../../../Common/Flow/Types.js';
 import type { Interaction } from 'discord.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 import type { ExecutionContext } from '../../../Domain/index.js';
+import { ensureCommandPermission } from '../../utils/PermissionGuard.js';
 
 interface FlowState {
     serverId: string;
@@ -103,6 +104,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .next()
             .step()
             .prompt(async (ctx: StepContext) => {
+                const permission = await ensureCommandPermission(ctx.interaction as ChatInputCommandInteraction, {
+                    templates: ['object:game:create:{serverId}', 'object:game:create'],
+                    context: { serverId: ctx.state.serverId },
+                });
+                if (!permission.allowed) {
+                    await (ctx.interaction as ChatInputCommandInteraction).followUp({
+                        content: permission.reason ?? 'Permission denied for game creation.',
+                        flags: MessageFlags.Ephemeral,
+                    });
+                    return;
+                }
                 const g = await createGame(ctx.state.gameName!, ctx.state.imageUrl || '', ctx.state.serverId);
                 await (ctx.interaction as ChatInputCommandInteraction).followUp({
                     content: `Game created: ${g.uid} '${g.name}'.`,

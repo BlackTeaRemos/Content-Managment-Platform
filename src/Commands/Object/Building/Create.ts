@@ -13,6 +13,7 @@ import { log } from '../../../Common/Log.js';
 import { flowManager } from '../../../Common/Flow/Manager.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 import type { ExecutionContext } from '../../../Domain/index.js';
+import type { TokenSegmentInput } from '../../../Common/permission/index.js';
 
 interface FlowState {
     type: string;
@@ -31,6 +32,8 @@ type StepContext = {
 export const data = new SlashCommandSubcommandBuilder()
     .setName('create')
     .setDescription('Interactive create a new factory');
+
+export const permissionTokens: TokenSegmentInput[][] = [['object', 'building', 'create']];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     await executeWithContext(interaction, async (flowManager, executionContext) => {
