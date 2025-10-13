@@ -12,8 +12,9 @@ import { getSupportedTypes } from '../Common/Flow/ObjectRegistry.js';
 import { neo4jClient } from '../Setup/Neo4j.js';
 import { log } from '../Common/Log.js';
 import { getGame } from '../Flow/Object/Game/View.js';
-import { grantForever, resolve } from '../Common/permission/index.js';
-import { requestPermissionFromAdmin } from '../Flow/permission/PermissionUI.js';
+import { resolveViewPermissions } from '../Flow/Command/ViewFlow.js';
+import { requestPermissionFromAdmin } from '../SubCommand/Permission/PermissionUI.js';
+import { grantForever } from '../Common/permission/index.js';
 
 export const data = new SlashCommandBuilder().setName('view').setDescription('Interactive view of stored objects');
 export const permissionTokens = 'command:view';
@@ -165,99 +166,36 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .prompt(async (ctx: any) => {
                 const type = ctx.state.type!;
                 const id = ctx.state.id!;
-
                 const baseInteraction = ctx.interaction as ChatInputCommandInteraction;
-                log.info(
-                    `View command: resolving permissions for user=${baseInteraction.user.id} type=${type} id=${id}`,
-                    'ViewCommand',
-                    'resolve.ensure',
-                );
-                const permissionResult = await resolve.ensure(['view:{type}:{id}'], {
-                    context: {
-                        commandName: baseInteraction.commandName,
-                        guildId: baseInteraction.guildId ?? undefined,
-                        userId: baseInteraction.user.id,
-                        type,
-                        id,
-                    },
-                    getMember: async () => {
-                        if (!baseInteraction.guild) {
-                            log.info(
-                                'View command: no guild available, skipping member fetch',
-                                'ViewCommand',
-                                'resolve.ensure',
-                            );
-                            return null;
-                        }
+
+                const permission = await resolveViewPermissions(baseInteraction, { type, id });
+                if (!permission.allowed) {
+                    if (permission.requiresApproval) {
                         try {
-                            const member = await baseInteraction.guild.members.fetch(baseInteraction.user.id);
-                            log.info(
-                                `View command: fetched guild member ${member.id}(${member.user.tag})`,
-                                'ViewCommand',
-                                'resolve.ensure',
-                            );
-                            return member;
-                        } catch (error) {
-                            log.warning(
-                                `Failed to fetch guild member: ${String(error)}`,
-                                'ViewCommand',
-                                'resolve.ensure',
-                            );
-                            return null;
-                        }
-                    },
-                    requestApproval: async payload => {
-                        log.info(
-                            `View command: requesting approval for tokens=${payload.tokens.map(t => t.join(':')).join(',')}`,
-                            'ViewCommand',
-                            'resolve.ensure',
-                        );
-                        if (!baseInteraction.deferred && !baseInteraction.replied) {
-                            try {
-                                await baseInteraction.deferReply({ ephemeral: true });
-                                log.info(
-                                    'View command: deferred reply before approval request',
-                                    'ViewCommand',
-                                    'resolve.ensure',
-                                );
-                            } catch (error) {
-                                log.warning(
-                                    `Failed to defer interaction: ${String(error)}`,
-                                    'ViewCommand',
-                                    'resolve.ensure',
-                                );
-                            }
-                        }
-                        const decision = await requestPermissionFromAdmin(baseInteraction, payload);
-                        log.info(
-                            `View command: admin decision for permission=${decision}`,
-                            'ViewCommand',
-                            'resolve.ensure',
-                        );
+                            await baseInteraction.deferReply({ ephemeral: true });
+                        } catch {}
+                        const decision = await requestPermissionFromAdmin(baseInteraction, {
+                            tokens: permission.tokens,
+                            reason: permission.reason,
+                        });
                         if (decision === 'approve_forever' && baseInteraction.guildId) {
-                            grantForever(baseInteraction.guildId, baseInteraction.user.id, payload.tokens[0] ?? []);
-                            log.info(
-                                'View command: granted forever permission after admin approval',
-                                'ViewCommand',
-                                'resolve.ensure',
-                            );
+                            grantForever(baseInteraction.guildId, baseInteraction.user.id, permission.tokens[0] ?? []);
                         }
-                        return decision;
-                    },
-                });
-
-                log.info(
-                    `View command: permission result success=${permissionResult.success} reason=${permissionResult.detail.reason}`,
-                    'ViewCommand',
-                    'resolve.ensure',
-                );
-
-                if (!permissionResult.success) {
-                    await baseInteraction.followUp({
-                        content: permissionResult.detail.reason ?? 'You are not allowed to view this item.',
-                        flags: MessageFlags.Ephemeral,
-                    });
-                    return;
+                        if (decision !== 'approve_forever' && decision !== 'approve_once') {
+                            await baseInteraction.followUp({
+                                content: 'Permission denied or no admin response.',
+                                flags: MessageFlags.Ephemeral,
+                            });
+                            return;
+                        }
+                        // otherwise continue to show details
+                    } else {
+                        await baseInteraction.followUp({
+                            content: permission.reason ?? 'You are not allowed to view this item.',
+                            flags: MessageFlags.Ephemeral,
+                        });
+                        return;
+                    }
                 }
 
                 let embed = new EmbedBuilder().setTitle('Details').setColor('Blue');
@@ -271,7 +209,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                     embed.setDescription(`Viewing for type ${type} not implemented.`);
                 }
                 try {
-                    await (ctx.interaction as ChatInputCommandInteraction).followUp({
+                    await baseInteraction.followUp({
                         embeds: [embed],
                         flags: MessageFlags.Ephemeral,
                     });

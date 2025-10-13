@@ -15,7 +15,9 @@ import type { FlowStep } from '../../../Common/Flow/Types.js';
 import type { Interaction } from 'discord.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 import type { ExecutionContext } from '../../../Domain/index.js';
-import { ensureCommandPermission } from '../../utils/PermissionGuard.js';
+import { resolveGameCreatePermissions } from '../../../Flow/Command/GameCreateFlow.js';
+import { requestPermissionFromAdmin } from '../../../SubCommand/Permission/PermissionUI.js';
+import { grantForever } from '../../../Common/permission/index.js';
 
 interface FlowState {
     serverId: string;
@@ -104,16 +106,37 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .next()
             .step()
             .prompt(async (ctx: StepContext) => {
-                const permission = await ensureCommandPermission(ctx.interaction as ChatInputCommandInteraction, {
-                    templates: ['object:game:create:{serverId}', 'object:game:create'],
-                    context: { serverId: ctx.state.serverId },
+                const baseInteraction = ctx.interaction as ChatInputCommandInteraction;
+                const permission = await resolveGameCreatePermissions(baseInteraction, {
+                    serverId: ctx.state.serverId,
                 });
                 if (!permission.allowed) {
-                    await (ctx.interaction as ChatInputCommandInteraction).followUp({
-                        content: permission.reason ?? 'Permission denied for game creation.',
-                        flags: MessageFlags.Ephemeral,
-                    });
-                    return;
+                    if (permission.requiresApproval) {
+                        try {
+                            await baseInteraction.deferReply({ ephemeral: true });
+                        } catch {}
+                        const decision = await requestPermissionFromAdmin(baseInteraction, {
+                            tokens: permission.tokens,
+                            reason: permission.reason,
+                        });
+                        if (decision === 'approve_forever' && baseInteraction.guildId) {
+                            grantForever(baseInteraction.guildId, baseInteraction.user.id, permission.tokens[0] ?? []);
+                        }
+                        if (decision !== 'approve_forever' && decision !== 'approve_once') {
+                            await baseInteraction.followUp({
+                                content: 'Permission denied or no admin response.',
+                                flags: MessageFlags.Ephemeral,
+                            });
+                            return;
+                        }
+                        // otherwise proceed
+                    } else {
+                        await baseInteraction.followUp({
+                            content: permission.reason ?? 'Permission denied for game creation.',
+                            flags: MessageFlags.Ephemeral,
+                        });
+                        return;
+                    }
                 }
                 const g = await createGame(ctx.state.gameName!, ctx.state.imageUrl || '', ctx.state.serverId);
                 await (ctx.interaction as ChatInputCommandInteraction).followUp({

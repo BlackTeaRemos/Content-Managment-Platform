@@ -10,7 +10,7 @@ import {
     type PermissionTokenInput,
     type TokenSegmentInput,
 } from '../Common/permission/index.js';
-import { requestPermissionFromAdmin } from '../Flow/permission/PermissionUI.js';
+import { requestPermissionFromAdmin } from '../SubCommand/Permission/PermissionUI.js';
 import type { ConfigService } from '../Services/ConfigService.js';
 
 /**
