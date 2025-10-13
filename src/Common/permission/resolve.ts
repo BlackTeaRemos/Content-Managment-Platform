@@ -158,6 +158,7 @@ export interface ResolveEnsureDetail {
     tokens: PermissionToken[];
     reason?: string;
     decision?: PermissionDecision;
+    requiresApproval?: boolean;
 }
 
 /**
@@ -221,13 +222,17 @@ async function ensure(
         const evaluation = await checkPermission(options.permissions, member ?? null, inputs);
 
         if (evaluation.allowed) {
-            return { success: true, detail: { tokens } };
+            return { success: true, detail: { tokens, requiresApproval: !!evaluation.requiresApproval } };
         }
 
         if (!evaluation.requiresApproval || options.skipApproval || !options.requestApproval) {
             return {
                 success: false,
-                detail: { tokens, reason: evaluation.reason ?? 'Permission denied' },
+                detail: {
+                    tokens,
+                    reason: evaluation.reason ?? 'Permission denied',
+                    requiresApproval: !!evaluation.requiresApproval,
+                },
             };
         }
 
