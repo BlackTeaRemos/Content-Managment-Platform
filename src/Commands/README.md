@@ -1,150 +1,77 @@
-# Command Loader Guide
+# Command Authoring Guide
 
-This document explains how to add new commands and subcommands in the bot, leveraging the existing loader implementations in `src/commands/index.ts` and the dynamic grouping under `src/commands/object/`.
+This document explains how runtime command modules are structured and how to add new behaviour without duplicating permission or flow logic.
 
----
+## Command Module Shape
 
-## Top-Level Commands
-
-The main loader in `src/commands/index.ts` discovers files and classes under the `commands` directory. Each module must export either:
-
-1. A default-exported class with `data` and `execute` properties:
-
-    ```ts
-    export default class MyCommand {
-        public data = new SlashCommandBuilder().setName('mycmd').setDescription('My test command');
-
-        public async execute(interaction: ChatInputCommandInteraction) {
-            // command logic
-        }
-    }
-    ```
-
-2. Named exports `data` and `execute`:
-
-    ```ts
-    export const data = new SlashCommandBuilder().setName('greet').setDescription('Send a greeting');
-
-    export async function execute(interaction: ChatInputCommandInteraction) {
-        await interaction.reply('Hello!');
-    }
-    ```
-
-When the bot starts, the loader runs `ExecuteFilesAndCollectExports` over `src/commands`. It builds a map `{ [commandName]: BotCommand }` and exposes:
-
-- `commandsReady`: Promise that resolves after loading
-- `commands`: object mapping command names to handlers
-
-In your application code (e.g. `src/app.ts`), use:
+Every file under `src/Commands/**` exports the pair `data` and `execute`.
 
 ```ts
-await commandsReady;
-const payload = Object.values(commands).map(cmd => cmd.data.toJSON());
-await client.application!.commands.set(payload);
+export const data = new SlashCommandBuilder().setName('view').setDescription('Interactive view of stored objects');
 
-client.on('interactionCreate', interaction => {
-    if (!interaction.isChatInputCommand()) return;
-    const handler = commands[interaction.commandName];
-    if (handler) handler.execute(interaction);
-});
+export async function execute(interaction: ChatInputCommandInteraction) {
+    // step orchestration lives here
+}
 ```
 
----
+The command loader in `src/Commands/index.ts` imports every file automatically. Avoid side effects in module scope because everything is evaluated eagerly when the loader runs.
 
-## Grouped Subcommands: `object` Command
+### Keep Commands Thin
 
-The `object` command uses a custom loader in `src/commands/object/index.ts`. It builds a root `/object` command with subcommand groups and subcommands based on directory structure:
+Command modules own the interaction wiring only:
 
-```
-src/commands/object/
-├─ create.ts       # becomes subcommand object.create
-├─ update.ts
-└─ detail.ts
-```
+- build slash metadata via `data`
+- orchestrate the flow builder steps inside `execute`
+- call into flow helpers (for example `resolveViewPermissions`) to perform domain logic such as permission resolution
 
-Further nested groups live in subfolders:
+All expensive or reusable behaviour belongs in `src/Flow/**`.
 
-```
-src/commands/object/user/
-  ├─ create.ts    # object user.create
-  └─ delete.ts
-```
+## Adding a New Command
 
-### How it works
-
-1. The root `data` is built with `.setName('object')` and `.setDescription(...)`.
-2. For each subfolder under `object/`, a subcommand group is added:
-    ```ts
-    data.addSubcommandGroup(group => {
-        group.setName('user').setDescription('Manage user');
-        group.addSubcommand(sub => subData);
-        return group;
-    });
-    ```
-3. Handlers are registered in a `handlers: Record<string, Handler>` map, keyed as `groupName.subName`.
-4. The exported `execute` function reads `interaction.options.getSubcommandGroup()` and `.getSubcommand()` to dispatch:
-    ```ts
-    const key = `${group}.${sub}`;
-    if (handlers[key]) await handlers[key](interaction);
-    ```
-
-### Adding a new subcommand group
-
-1. Create a new folder under `src/commands/object/`, e.g. `stats`:
-2. Add JS/TS files exporting `data: SlashCommandSubcommandBuilder` and `execute`:
-
-    ```ts
-    export const data = new SlashCommandSubcommandBuilder().setName('report').setDescription('Show stats report');
-
-    export async function execute(interaction: ChatInputCommandInteraction) {
-        // logic
-    }
-    ```
-
-3. Restart or rebuild; the loader picks up new modules automatically.
-
----
-
-## Interactive Creation Flows with FlowBuilder
-
-The bot uses a fluent API for guided, multi-step commands. The `flowManager.builder(...)` method returns a `FlowBuilder` to define each step:
+1. Create a new TypeScript file under the appropriate folder, for example `src/Commands/Foo.ts` or `src/Commands/Object/Bar/Baz.ts`.
+2. Export `data` and `execute` as shown earlier. Use `SlashCommandSubcommandBuilder` for subcommands.
+3. Define a flow state interface to capture transient data between steps.
+4. Use `flowManager.builder(...)` to configure the interactive sequence. Keep each step small and use helper utilities instead of inlining heavy code.
+5. For permissions, call the flow helper dedicated to your command subtype.
 
 ```ts
-import { flowManager } from './src/flow/FlowManager';
-
-await flowManager
-    .builder(userId, interaction, { serverId })
-    .step('step_custom_id')
-    .prompt(async ctx => {
-        // send modal or message to prompt user
-    })
-    .onInteraction(async (ctx, interaction) => {
-        // handle button or modal submit
-        return true; // advance to next
-    })
-    .next()
-    .step()
-    .prompt(async ctx => {
-        // ask for text or attachment
-    })
-    .onMessage(async (ctx, message) => {
-        // process message, e.g. image upload or skip
-        return true; // advance
-    })
-    .next()
-    .step()
-    .prompt(async ctx => {
-        // finalize creation, call flow logic
-    })
-    .next()
-    .start();
+const permission = await resolveFooPermissions(interaction, { contextValue });
+if (!permission.allowed) {
+    await interaction.followUp({ content: permission.reason ?? 'Denied', flags: MessageFlags.Ephemeral });
+    return;
+}
 ```
 
-FlowBuilder methods:
+Publish the command by restarting the bot or re-running the loader pipeline. The registration layer collects the new `data` definitions automatically.
 
-- `step(customId?)`: begin a new flow step, optional interaction custom ID
-- `prompt(fn)`: send a prompt via interaction or message
-- `onInteraction(fn)`: handle an interaction (button/modal)
-- `onMessage(fn)`: handle a user message (text or attachment)
-- `next()`: finalize current step
-- `start()`: launch the flow sequence
+## Object Command Hierarchy
+
+Nested folders inside `src/Commands/Object` map to `/object` subcommand groups. The loader determines the slash command route based on folder depth.
+
+- `src/Commands/Object/View.ts` → `/object view`
+- `src/Commands/Object/Game/Create.ts` → `/object game create`
+
+Each subcommand module follows the same rules: thin orchestration, call into the corresponding flow helper in `src/Flow/Command`.
+
+## Flow Builder Primer
+
+Commands rely on `flowManager.builder(userId, interaction, initialState, executionContext)` to orchestrate conversations. The builder exposes:
+
+- `step(customId?)`: start a new stage
+- `prompt(handler)`: send UI to the user
+- `onInteraction(handler)` / `onMessage(handler)`: capture responses
+- `next()`: advance to the next stage
+- `start()`: launch the configured flow
+
+State is passed through `ctx.state`, giving you the place to collect form values, attachments, or IDs for subsequent steps. Delegating domain work to flow helpers keeps the command file concerned only with control flow.
+
+## Permission Helpers Per Command
+
+Every command family owns a helper in `src/Flow/Command/*Flow.ts`. These helpers:
+
+- resolve permission templates against context
+- fetch guild members when required
+- trigger admin approval and handle forever grants
+- centralize logging for observability
+
+When implementing a new command, add a new helper alongside the existing ones and call it from the command module. This keeps permission logic consistent and discoverable.
