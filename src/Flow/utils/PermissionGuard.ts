@@ -12,6 +12,7 @@ import {
     type PermissionsObject,
     type TokenResolveContext,
     type TokenSegmentInput,
+    type ResolveEnsureOptions,
 } from '../../Common/permission/index.js';
 // Interactive permission UI moved to SubCommand so flows remain UI-free.
 // import { requestPermissionFromAdmin } from '../permission/PermissionUI.js';
@@ -85,7 +86,7 @@ export async function ensureCommandPermission(
 ): Promise<EnsureCommandPermissionResult> {
     const baseContext = __buildBaseContext(interaction);
     const mergedContext = { ...baseContext, ...(options.context ?? {}) } as TokenResolveContext;
-    const ensureOptions: Parameters<typeof resolve.ensure>[1] = {
+    const ensureOptions: ResolveEnsureOptions = {
         context: mergedContext,
         permissions: options.permissions,
         // Keep approval disabled inside flows; commands must trigger interactive approval.
@@ -97,7 +98,7 @@ export async function ensureCommandPermission(
         ensureOptions.member = options.member;
     }
 
-    const outcome = await resolve.ensure(options.templates, ensureOptions);
+    const outcome = await resolve(options.templates, ensureOptions);
 
     return {
         allowed: outcome.success,

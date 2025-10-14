@@ -47,10 +47,10 @@ export async function resolveCommandPermission(
         'resolveCommandPermission',
     );
 
-    // Flows should not perform interactive approval. Ask resolve.ensure to evaluate permissions
+    // Flows should not perform interactive approval. Ask ensure to evaluate permissions
     // and indicate whether approval is required. Commands or subcommands should trigger the
     // interactive approval UI when needed.
-    const outcome = await resolve.ensure(templates, {
+    const outcome = await resolve(templates, {
         context: baseContext,
         member: await getMember(interaction, logSource, action),
         // Do not provide requestApproval delegate here: keep flow non-interactive

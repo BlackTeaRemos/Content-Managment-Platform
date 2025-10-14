@@ -5,7 +5,7 @@ import {
     checkPermission,
     formatPermissionToken,
     grantForever,
-    resolve as resolvePermission,
+    resolveTokens as resolvePermission,
     type PermissionToken,
     type PermissionTokenInput,
     type TokenSegmentInput,

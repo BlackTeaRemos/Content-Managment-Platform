@@ -59,7 +59,13 @@ function substitutePlaceholders(value: string, context: TokenResolveContext): st
  * @example
  * resolve('command:{commandName}', { commandName: 'create' });
  */
-function resolveTemplate(template: string | TokenSegmentInput[], context: TokenResolveContext): PermissionToken[] {
+/**
+ * Internal token resolver used by both modes.
+ */
+export function resolveTokens(
+    template: string | TokenSegmentInput[],
+    context: TokenResolveContext = {} as TokenResolveContext,
+): PermissionToken[] {
     if (!template || (Array.isArray(template) && template.length === 0)) {
         log.info(`Permission resolve: empty or invalid template: ${String(template)}`, 'Permission.resolve');
         return [];
@@ -67,7 +73,7 @@ function resolveTemplate(template: string | TokenSegmentInput[], context: TokenR
 
     const templates: (string | TokenSegmentInput[])[] = Array.isArray(template)
         ? [template]
-        : template
+        : String(template)
               .split(',')
               .map(t => t.trim())
               .filter(Boolean);
@@ -121,6 +127,18 @@ function resolveTemplate(template: string | TokenSegmentInput[], context: TokenR
 }
 
 /**
+ * Resolve (approval-aware): ensure the provided templates are allowed for the requester.
+ * This is the async/awaitable entrypoint callers expect when they want a definitive
+ * permission decision.
+ */
+export async function ensure(
+    templates: Array<string | TokenSegmentInput[]>,
+    options: ResolveEnsureOptions = {},
+): Promise<ResolveEnsureResult> {
+    return doEnsure(templates, options);
+}
+
+/**
  * Payload provided to approval flow delegates when permissions require admin confirmation.
  * @property tokens PermissionToken[] Tokens that need approval (example: [['object','game','create']]).
  * @property reason string | undefined Optional explanation for request (example: 'Token(s) not defined').
@@ -131,7 +149,7 @@ export interface ResolveApprovalPayload {
 }
 
 /**
- * Options passed to resolve.ensure for evaluating and approving permission tokens.
+ * Options passed to ensure for evaluating and approving permission tokens.
  * @property context TokenResolveContext Context used for template substitution (example: { serverId: '123' }).
  * @property permissions PermissionsObject Optional permission configuration map (example: { 'object:game:create': 'once' }).
  * @property member GuildMember | null Already-fetched Discord member when available (example: cached GuildMember).
@@ -149,7 +167,7 @@ export interface ResolveEnsureOptions {
 }
 
 /**
- * Detailed outcome returned by resolve.ensure containing tokens, reasons, and decisions.
+ * Detailed outcome returned by ensure containing tokens, reasons, and decisions.
  * @property tokens PermissionToken[] Tokens evaluated during the process.
  * @property reason string | undefined Explanation when success is false.
  * @property decision PermissionDecision | undefined Admin decision when approval flow ran.
@@ -162,7 +180,7 @@ export interface ResolveEnsureDetail {
 }
 
 /**
- * Result returned by resolve.ensure.
+ * Result returned by ensure.
  * @property success boolean Indicates whether the permission check succeeded.
  * @property detail ResolveEnsureDetail Additional metadata about the evaluation result.
  */
@@ -178,7 +196,7 @@ function __collectEnsureTokens(
     const tokens: PermissionToken[] = [];
     const seen = new Set<string>();
     for (const template of templates) {
-        const resolved = resolveTemplate(template, context);
+        const resolved = resolveTokens(template, context);
         for (const token of resolved) {
             const key = formatPermissionToken(token);
             if (seen.has(key)) continue;
@@ -194,14 +212,10 @@ function __toInputs(tokens: PermissionToken[]): PermissionTokenInput[] {
 }
 
 /**
- * Resolve permission templates and ensure the requester holds required permissions, requesting approval when needed.
- * @param templates Array<string | TokenSegmentInput[]> Templates describing permission tokens.
- * @param options ResolveEnsureOptions Additional parameters controlling evaluation and approval flow.
- * @returns Promise<ResolveEnsureResult> Structured permission evaluation result.
- * @example
- * const outcome = await resolve.ensure(['object:game:create:{serverId}'], { context: { serverId: '123' } });
+ * Internal helper: run approval-aware evaluation for a set of templates.
+ * This is invoked when `resolve(templates, options)` is called in ensure-mode.
  */
-async function ensure(
+async function doEnsure(
     templates: Array<string | TokenSegmentInput[]>,
     options: ResolveEnsureOptions = {},
 ): Promise<ResolveEnsureResult> {
@@ -251,7 +265,7 @@ async function ensure(
             },
         };
     } catch (error) {
-        log.error(`resolve.ensure failed: ${String(error)}`, 'Permission.resolve.ensure');
+        log.error(`doEnsure failed: ${String(error)}`, 'Permission.doEnsure');
         return {
             success: false,
             detail: {
@@ -261,16 +275,3 @@ async function ensure(
         };
     }
 }
-
-type ResolveFn = {
-    (template: string | TokenSegmentInput[], context: TokenResolveContext): PermissionToken[];
-    ensure: (
-        templates: Array<string | TokenSegmentInput[]>,
-        options?: ResolveEnsureOptions,
-    ) => Promise<ResolveEnsureResult>;
-};
-
-/**
- * Resolve function extended with ensure helper for approval-aware permission checks.
- */
-export const resolve: ResolveFn = Object.assign(resolveTemplate, { ensure });
