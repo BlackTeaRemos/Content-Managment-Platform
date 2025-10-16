@@ -7,6 +7,14 @@ import {
     CommandExecutionContext,
     createExecutionContext,
 } from '../Domain/index.js';
+import {
+    checkPermission,
+    resolveTokens as resolvePermission,
+    formatPermissionToken,
+    type PermissionTokenInput,
+    type PermissionsObject,
+} from '../Common/permission/index.js';
+import type { GuildMember } from 'discord.js';
 
 /** Error thrown when attempting to register a duplicate command id. */
 export class DuplicateCommandError extends Error {
@@ -97,13 +105,135 @@ export class CommandRegistry {
     }
 
     /** Execute command by id with context; returns CommandResult. */
-    public async Execute(id: string, ctx: CommandExecutionContext): Promise<CommandResult> {
+    public async Execute(
+        id: string,
+        ctx: CommandExecutionContext,
+        opts?: {
+            permissions?: PermissionsObject; // optional permission map override
+            member?: GuildMember | null; // optional guild member to evaluate permissions with
+            skipApproval?: boolean; // when true, do not attempt any interactive approval (programmatic execution)
+            skipPermissionCheck?: boolean; // allow caller to bypass permission evaluation
+            userRoles?: string[]; // optional role ids for evaluation when member is not available
+        },
+    ): Promise<CommandResult> {
         const mod = this.Get(id);
 
         try {
-            // Basic permission check (future expansion)
-            if (mod.meta.permissions?.requiredRoles && !ctx.options.__userRoles) {
-                return { ok: false, error: 'MISSING_ROLES', message: 'Role information not provided' };
+            // Ensure a concrete executionContext exists (docs guarantee automatic creation)
+            try {
+                if (!ctx.executionContext) (ctx as any).executionContext = createExecutionContext();
+            } catch {
+                // ignore - defensive in case the ctx shape is unexpected at runtime
+            }
+
+            // Respect DM allowance from meta
+            if (!mod.meta.permissions?.allowDM && (!ctx.guildId || ctx.guildId === '')) {
+                return { ok: false, error: 'DM_NOT_ALLOWED', message: 'Command cannot be used in DMs' };
+            }
+
+            // Simple role-based check retained for backwards compatibility
+            if (mod.meta.permissions?.requiredRoles) {
+                const required = mod.meta.permissions.requiredRoles;
+                const providedRoles: string[] | undefined =
+                    (ctx.options && (ctx.options as any).__userRoles) ?? opts?.userRoles;
+
+                if (!providedRoles && !opts?.member) {
+                    return { ok: false, error: 'MISSING_ROLES', message: 'Role information not provided' };
+                }
+
+                let hasRole = false;
+                if (Array.isArray(providedRoles)) {
+                    hasRole = providedRoles.some(r => required.includes(r));
+                } else if (opts?.member) {
+                    const mem: any = opts.member;
+                    const memRoles = mem.roles?.cache ? Array.from(mem.roles.cache.keys()) : (mem.roles ?? []);
+                    if (Array.isArray(memRoles)) {
+                        hasRole = memRoles.some(r => required.includes(r));
+                    }
+                }
+
+                if (!hasRole) {
+                    return { ok: false, error: 'MISSING_ROLES', message: 'User lacks required roles' };
+                }
+            }
+
+            // Permission token evaluation (skip when caller asks to bypass)
+            if (!opts?.skipPermissionCheck) {
+                const cmdAny = mod as any;
+                let rawTemplates: string | string[] | Function | undefined =
+                    cmdAny.permissionTokens ?? `command:${mod.meta.id}`;
+
+                // If the module exported a function for templates we cannot reliably execute it
+                // in a programmatic context that is not a Discord interaction. Fall back to
+                // the canonical command token in that case.
+                const templates: (string | any[])[] = [];
+                if (typeof rawTemplates === 'function') {
+                    templates.push(`command:${mod.meta.id}`);
+                } else if (typeof rawTemplates === 'string') {
+                    templates.push(rawTemplates);
+                } else if (Array.isArray(rawTemplates)) {
+                    for (const entry of rawTemplates) templates.push(entry as string | any[]);
+                }
+
+                // Build resolver context from the execution context. Include a getMember helper
+                // so token resolvers can fetch a GuildMember when needed (programmatic callers
+                // may provide `opts.member` or rely on getMember for fetching).
+                const resolverCtx = {
+                    commandName: mod.meta.id,
+                    options: ctx.options,
+                    userId: ctx.userId,
+                    guildId: ctx.guildId ?? undefined,
+                    executionContext: ctx.executionContext,
+                    getMember: async () => {
+                        if (opts?.member) return opts.member;
+                        // Best-effort: if ctx contains a guildId and the registry has access to a
+                        // guild fetcher it could be used here; leave as null for now when not available.
+                        return null;
+                    },
+                } as const;
+
+                // Resolve templates into concrete tokens (most-specific first)
+                const tokens: any[] = [];
+                const seen = new Set<string>();
+                for (const tmpl of templates) {
+                    const resolved = resolvePermission(tmpl as any, resolverCtx as any);
+                    for (const token of resolved) {
+                        const display = formatPermissionToken(token);
+                        if (seen.has(display)) continue;
+                        seen.add(display);
+                        tokens.push(token);
+                    }
+                }
+
+                const inputs: PermissionTokenInput[] = tokens.length
+                    ? tokens.map(t => [...t])
+                    : [`command:${mod.meta.id}`];
+
+                // Build a minimal member-like object when none provided so permanent grants can be checked
+                let member = opts?.member ?? null;
+                if (!member && ctx.guildId && ctx.userId) {
+                    member = {
+                        id: ctx.userId,
+                        guild: { id: ctx.guildId },
+                        permissions: { has: (_: any) => false },
+                    } as unknown as GuildMember;
+                }
+
+                // Allow callers to override the permissions map via opts.permissions; otherwise
+                // use undefined which will make checkPermission consult the default source.
+                const evaluation = await checkPermission(opts?.permissions ?? undefined, member, inputs);
+
+                if (!evaluation.allowed) {
+                    if (evaluation.requiresApproval && !opts?.skipApproval) {
+                        // Programmatic callers cannot request interactive admin approval here.
+                        return {
+                            ok: false,
+                            error: 'PERMISSION_REQUIRES_APPROVAL',
+                            message: evaluation.reason ?? 'Permission requires approval',
+                        };
+                    }
+                    return { ok: false, error: 'PERMISSION_DENIED', message: evaluation.reason ?? 'Permission denied' };
+                }
             }
 
             return await mod.execute(ctx);
