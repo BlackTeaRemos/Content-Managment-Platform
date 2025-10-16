@@ -16,7 +16,7 @@ import type { ExecutionContext } from '../../../Domain/index.js';
 import type { TokenSegmentInput } from '../../../Common/permission/index.js';
 
 interface FlowState {
-    refType: 'organization' | 'game' | 'user';
+    refType: `organization` | `game` | `user`;
     refUid: string;
     text: string;
 }
@@ -29,52 +29,52 @@ type StepContext = {
 };
 
 export const data = new SlashCommandSubcommandBuilder()
-    .setName('create')
-    .setDescription('Add a description to a reference object');
+    .setName(`create`)
+    .setDescription(`Add a description to a reference object`);
 
-export const permissionTokens: TokenSegmentInput[][] = [['object', 'description', 'create']];
+export const permissionTokens: TokenSegmentInput[][] = [[`object`, `description`, `create`]];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    await executeWithContext(interaction, async (flowManager, executionContext) => {
+    await executeWithContext(interaction, async(flowManager, executionContext) => {
         // Interactive flow: collect refType, refUid, and description text
         await flowManager
-            .builder(interaction.user.id, interaction as any, { refType: '', refUid: '', text: '' }, executionContext)
-            .step('desc_modal')
-            .prompt(async (ctx: StepContext) => {
+            .builder(interaction.user.id, interaction as any, { refType: ``, refUid: ``, text: `` }, executionContext)
+            .step(`desc_modal`)
+            .prompt(async(ctx: StepContext) => {
                 const modal = new ModalBuilder()
-                    .setCustomId('desc_modal')
-                    .setTitle('New Description')
+                    .setCustomId(`desc_modal`)
+                    .setTitle(`New Description`)
                     .addComponents(
                         new ActionRowBuilder<TextInputBuilder>().addComponents(
                             new TextInputBuilder()
-                                .setCustomId('refType')
-                                .setLabel('Reference Type (organization/game/user)')
+                                .setCustomId(`refType`)
+                                .setLabel(`Reference Type (organization/game/user)`)
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(true),
                         ),
                         new ActionRowBuilder<TextInputBuilder>().addComponents(
                             new TextInputBuilder()
-                                .setCustomId('refUid')
-                                .setLabel('Reference UID')
+                                .setCustomId(`refUid`)
+                                .setLabel(`Reference UID`)
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(true),
                         ),
                         new ActionRowBuilder<TextInputBuilder>().addComponents(
                             new TextInputBuilder()
-                                .setCustomId('text')
-                                .setLabel('Description Text')
+                                .setCustomId(`text`)
+                                .setLabel(`Description Text`)
                                 .setStyle(TextInputStyle.Paragraph)
                                 .setRequired(true),
                         ),
                     );
                 await (ctx.interaction as ChatInputCommandInteraction).showModal(modal);
             })
-            .onInteraction(async (ctx: StepContext, interaction: any) => {
+            .onInteraction(async(ctx: StepContext, interaction: any) => {
                 if (interaction.isModalSubmit()) {
                     const fields = interaction.fields;
-                    ctx.state.refType = fields.getTextInputValue('refType') as 'organization' | 'game' | 'user';
-                    ctx.state.refUid = fields.getTextInputValue('refUid').trim();
-                    ctx.state.text = fields.getTextInputValue('text').trim();
+                    ctx.state.refType = fields.getTextInputValue(`refType`) as `organization` | `game` | `user`;
+                    ctx.state.refUid = fields.getTextInputValue(`refUid`).trim();
+                    ctx.state.text = fields.getTextInputValue(`text`).trim();
                     await interaction.deferUpdate();
                     return true;
                 }
@@ -82,16 +82,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             })
             .next()
             .step()
-            .prompt(async (ctx: StepContext) => {
+            .prompt(async(ctx: StepContext) => {
                 try {
                     const desc = await createDescription(ctx.state.refType, ctx.state.refUid, ctx.state.text);
                     await (ctx.interaction as ChatInputCommandInteraction).followUp({
                         content: `Description ${desc.uid} created for ${ctx.state.refType} ${ctx.state.refUid}.`,
                         flags: MessageFlags.Ephemeral,
                     });
-                } catch (error) {
+                } catch(error) {
                     const msg = error instanceof Error ? error.message : String(error);
-                    log.error('Error creating description', msg, 'createDescription');
+                    log.error(`Error creating description`, msg, `createDescription`);
                     await (ctx.interaction as ChatInputCommandInteraction).followUp({
                         content: `Error: ${msg}`,
                         flags: MessageFlags.Ephemeral,

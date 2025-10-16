@@ -12,12 +12,12 @@ import { flowManager } from '../Common/Flow/Manager.js';
 export async function onInteractionCreate(interaction: Interaction): Promise<void> {
     log.info(
         `Interaction received: type=${interaction.type}, id=${interaction.id}, user=${interaction.user?.tag}`,
-        'Interaction',
+        `Interaction`,
     );
 
     try {
         await flowManager.onInteraction(interaction);
-    } catch (error) {
-        log.error(`Flow manager failed to process interaction ${interaction.id}: ${(error as Error).message}`, 'Flow');
+    } catch(error) {
+        log.error(`Flow manager failed to process interaction ${interaction.id}: ${(error as Error).message}`, `Flow`);
     }
 }

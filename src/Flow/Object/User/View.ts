@@ -15,7 +15,7 @@ export interface ViewUser {
  * Retrieve all users from the database, ordered by name
  */
 export async function listUsers(): Promise<ViewUser[]> {
-    const session = await neo4jClient.GetSession('READ');
+    const session = await neo4jClient.GetSession(`READ`);
     try {
         const res = await session.run(
             `
@@ -25,7 +25,7 @@ export async function listUsers(): Promise<ViewUser[]> {
             `,
         );
         return res.records.map(record => {
-            const props = record.get('u').properties;
+            const props = record.get(`u`).properties;
             return {
                 uid: props.uid,
                 discord_id: props.discord_id,
@@ -45,7 +45,7 @@ export async function listUsers(): Promise<ViewUser[]> {
  * @returns The user properties or null if not found
  */
 export async function getUserByDiscordId(discordId: string): Promise<ViewUser | null> {
-    const session = await neo4jClient.GetSession('READ');
+    const session = await neo4jClient.GetSession(`READ`);
     try {
         const res = await session.run(
             `
@@ -57,7 +57,7 @@ export async function getUserByDiscordId(discordId: string): Promise<ViewUser | 
         if (res.records.length === 0) {
             return null;
         }
-        const props = res.records[0].get('u').properties;
+        const props = res.records[0].get(`u`).properties;
         return {
             uid: props.uid,
             discord_id: props.discord_id,
@@ -76,7 +76,7 @@ export async function getUserByDiscordId(discordId: string): Promise<ViewUser | 
  * @returns The user properties or null if not found
  */
 export async function getUserByUid(uid: string): Promise<ViewUser | null> {
-    const session = await neo4jClient.GetSession('READ');
+    const session = await neo4jClient.GetSession(`READ`);
     try {
         const res = await session.run(
             `
@@ -88,7 +88,7 @@ export async function getUserByUid(uid: string): Promise<ViewUser | null> {
         if (res.records.length === 0) {
             return null;
         }
-        const props = res.records[0].get('u').properties;
+        const props = res.records[0].get(`u`).properties;
         return {
             uid: props.uid,
             discord_id: props.discord_id,

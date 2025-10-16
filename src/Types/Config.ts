@@ -7,7 +7,7 @@ export interface ValidatedConfig {
     discordToken: string;
     discordGuildId: string;
     discordCategoryId: string;
-    logLevel?: 'debug' | 'info' | 'warn' | 'error';
+    logLevel?: `debug` | `info` | `warn` | `error`;
     dataRoot?: string;
     mirrorRoot?: string;
     tempRoot?: string;

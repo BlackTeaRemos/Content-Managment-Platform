@@ -37,7 +37,7 @@ export class ConfigService {
                 discordToken: Joi.string().required(),
                 discordGuildId: Joi.string().required(),
                 discordCategoryId: Joi.string().required(),
-                logLevel: Joi.string().valid('debug', 'info', 'warn', 'error'),
+                logLevel: Joi.string().valid(`debug`, `info`, `warn`, `error`),
                 dataRoot: Joi.string(),
                 mirrorRoot: Joi.string(),
                 tempRoot: Joi.string(),
@@ -77,7 +77,7 @@ export class ConfigService {
             };
             this._eventBus.emit(`config:loaded`, validated);
             return validated;
-        } catch (err: any) {
+        } catch(err: any) {
             throw new Error(`Failed to load config from '${path}': ${err.message}`);
         }
     }

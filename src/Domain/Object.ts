@@ -79,7 +79,7 @@ export interface TransactionRecord {
  */
 export interface JsonMutationOp {
     /** Operation type: set, remove, increment, decrement, merge. */
-    op: 'set' | 'remove' | 'increment' | 'decrement' | 'merge';
+    op: `set` | `remove` | `increment` | `decrement` | `merge`;
     /** JSON Pointer path to the target node. */
     path: string;
     /** Value used for set/merge/increment/decrement operations. */

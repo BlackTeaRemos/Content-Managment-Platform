@@ -59,7 +59,7 @@ export async function LoadConfig(configPath: string): Promise<AppConfig> {
         }
         MAIN_EVENT_BUS.emit(`config:loaded`, parsedConfig);
         return parsedConfig as AppConfig;
-    } catch (configError) {
+    } catch(configError) {
         MAIN_EVENT_BUS.emit(`config:error`, configError);
         throw configError;
     }

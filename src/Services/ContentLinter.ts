@@ -15,9 +15,9 @@ export interface LintResult {
 }
 
 const defaultDictionary: Record<string, string> = {
-    cfg: 'configuration',
-    id: 'identifier',
-    approx: 'approximately',
+    cfg: `configuration`,
+    id: `identifier`,
+    approx: `approximately`,
 };
 
 /** Tokenize simple word boundaries */
@@ -52,13 +52,13 @@ export function lintContent(text: string, dict: Record<string, string> = default
 
     if (apply && issues.length) {
         // Apply from end to start so indexes remain valid
-        const chars = result.split('');
+        const chars = result.split(``);
 
         for (let i = issues.length - 1; i >= 0; i--) {
             const issue = issues[i];
             chars.splice(issue.start, issue.abbreviation.length, issue.suggestion);
         }
-        result = chars.join('');
+        result = chars.join(``);
     }
     return { issues, fixed: apply ? result : undefined };
 }

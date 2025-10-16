@@ -47,12 +47,12 @@ export async function ExecuteFilesInSubdirectories(dirPath: string) {
                     }
 
                     log.debug(`File at ${filePath} executed successfully`, import.meta.filename);
-                } catch (error) {
+                } catch(error) {
                     log.error(`Failed to execute file at ${filePath}:`, (error as Error).message, import.meta.filename);
                 }
             }
         }
-    } catch (error) {
+    } catch(error) {
         log.error(`Error while executing files in subdirectories:`, (error as Error).message, import.meta.filename);
     }
 }

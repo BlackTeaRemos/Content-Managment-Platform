@@ -27,9 +27,9 @@ export async function resolveViewPermissions(
 ): Promise<ViewPermissionResult> {
     return resolveCommandPermission({
         interaction,
-        templates: ['view:{type}:{id}'],
+        templates: [`view:{type}:{id}`],
         context: { type: context.type, id: context.id },
-        logSource: 'ViewFlow',
+        logSource: `ViewFlow`,
         action: `view:${context.type}:${context.id}`,
     });
 }

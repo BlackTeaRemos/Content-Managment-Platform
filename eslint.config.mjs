@@ -1,62 +1,123 @@
-// ESLint v9 flat config
-import       // Enforce blank lines before control statements
-      'padding-line-between-statements': [
-        'error',
-        { blankLine: 'always', prev: '*', next: ['if', 'for', 'while', 'do', 'switch', 'try'] }
-      ],
-      // Prettier rules
-      'prettier/prettier': 'error',eslint/js';
-import tseslint from 'typescript-eslint';
-import prettierConfig from 'eslint-config-prettier';
-import prettierPlugin from 'eslint-plugin-prettier';
+// @ts-check
 
-export default tseslint.config(
-  {
-    ignores: ['node_modules/**', 'cmp/**', 'dist/**', 'tmp-tests/**'],
-  },
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
-  prettierConfig,
-  {
-    files: ['**/*.ts', '**/*.tsx', '**/*.js'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
+import * as js from '@eslint/js';
+import tsparser from '@typescript-eslint/parser';
+import importPlugin from 'eslint-plugin-import';
+import stylistic from '@stylistic/eslint-plugin';
+import * as tseslint from '@typescript-eslint/eslint-plugin';
+import * as reactPlugin from 'eslint-plugin-react';
+
+/**
+ * ESLint config separated by responsibility.
+ */
+export default [
+    // Core JS rules (merge recommended rules)
+    {
+        files: [`src/**/*.js`, `src/**/*.mjs`],
+        languageOptions: {
+            parserOptions: {
+                ecmaVersion: `latest`,
+                sourceType: `module`,
+            },
+            globals: {
+                console: `readonly`,
+                process: `readonly`,
+            },
+        },
+        rules: {
+            ...(js.configs?.recommended?.rules ?? {}),
+        },
     },
-    plugins: {
-      prettier: prettierPlugin,
+
+    // TypeScript strict & stylistic (merge shared rules)
+    {
+        files: [`src/**/*.ts`, `src/**/*.tsx`],
+        languageOptions: {
+            parser: tsparser,
+            parserOptions: {
+                project: true,
+                // @ts-ignore
+                tsconfigRootDir: import.meta.dirname,
+                ecmaVersion: `latest`,
+                sourceType: `module`,
+            },
+            globals: {
+                window: `readonly`,
+                document: `readonly`,
+                __dirname: `readonly`,
+                require: `readonly`,
+                module: `readonly`,
+                exports: `readonly`,
+                global: `readonly`,
+                SVGSVGElement: `readonly`,
+                MAIN_WINDOW_VITE_DEV_SERVER_URL: `readonly`,
+                MAIN_WINDOW_VITE_NAME: `readonly`,
+                setImmediate: `readonly`,
+                clearImmediate: `readonly`,
+                setTimeout: `readonly`,
+                clearTimeout: `readonly`,
+                setInterval: `readonly`,
+                JSX: `readonly`,
+            },
+        },
+        rules: {
+            ...(tseslint.configs?.strict?.rules ?? {}),
+            ...(tseslint.configs?.stylistic?.rules ?? {}),
+        },
     },
-    rules: {
-      // Enforce K&R (1TBS) brace style
-      'brace-style': ['error', '1tbs', { allowSingleLine: false }],
-      // For TS, use the TS-aware rule and disable core for TS files via overrides below
-      '@typescript-eslint/brace-style': 'off',
-      // Keep single-line non-block bodies beside the statement
-      'nonblock-statement-body-position': ['error', 'beside'],
-      // Require braces on all control statements
-      curly: ['error', 'all'],
-      // Enforce spaces around keywords
-      'keyword-spacing': ['error', { before: true, after: true }],
-      // Enforce blank lines before control statements
-      'padding-line-between-statements': [
-        'error',
-        { blankLine: 'always', prev: '*', next: ['if', 'for', 'while', 'do', 'switch', 'try'] },
-      ],
-      // Enforce semicolons
-      '@typescript-eslint/semi': ['error', 'always'],
-      // Enforce trailing commas
-      '@typescript-eslint/comma-dangle': ['error', 'always-multiline'],
-      // Enforce no space before function parentheses
-      '@typescript-eslint/space-before-function-paren': ['error', 'never', { 'anonymous': 'never', 'asyncArrow': 'never' }],
-      // Prettier rules
-      'prettier/prettier': 'error',
+
+    // Stylistic conventions
+    {
+        plugins: { '@stylistic': stylistic },
+        rules: {
+            curly: [`error`, `all`],
+            'arrow-body-style': [`error`, `always`],
+
+            '@stylistic/brace-style': [`error`, `1tbs`, { allowSingleLine: false }],
+            '@stylistic/prefer-arrow-callback': `off`,
+            '@stylistic/indent': [`error`, 4, { MemberExpression: `off`, SwitchCase: 1 }],
+            '@stylistic/quotes': [`error`, `backtick`, { avoidEscape: true }],
+            '@stylistic/semi': [`error`, `always`],
+            '@stylistic/comma-dangle': [`error`, `always-multiline`],
+            '@stylistic/space-before-function-paren': [`error`, `never`],
+            '@stylistic/object-curly-spacing': [`error`, `always`],
+            '@stylistic/array-bracket-spacing': [`error`, `never`],
+            '@stylistic/key-spacing': [`error`, { beforeColon: false, afterColon: true }],
+            '@stylistic/no-trailing-spaces': `error`,
+            '@stylistic/eol-last': `error`,
+            '@stylistic/comma-spacing': [`error`, { before: false, after: true }],
+            '@stylistic/space-infix-ops': `error`,
+            '@stylistic/space-unary-ops': `error`,
+            '@stylistic/keyword-spacing': `error`,
+            '@stylistic/arrow-spacing': `error`,
+            '@stylistic/block-spacing': `error`,
+        },
     },
-  },
-  {
-    files: ['**/*.ts', '**/*.tsx'],
-    rules: {
-      'brace-style': 'off',
-      '@typescript-eslint/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+
+    // React JSX rules (merge recommended react config)
+    {
+        rules: {
+            ...(reactPlugin.configs?.recommended?.rules ?? {}),
+            'react/jsx-uses-react': `off`,
+            'react/react-in-jsx-scope': `off`,
+        },
     },
-  }
-);
+
+    // Import plugin rules
+    {
+        plugins: { import: importPlugin },
+        rules: {
+            'import/order': `off`,
+            'import/no-unresolved': `off`,
+            'import/no-unused-modules': `warn`,
+        },
+    },
+
+    // General TypeScript overrides
+    {
+        rules: {
+            '@typescript-eslint/explicit-function-return-type': `off`,
+            'no-unused-vars': [`warn`, { ignoreRestSiblings: true }],
+        },
+    },
+];

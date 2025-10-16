@@ -15,7 +15,7 @@ export function buildDescriptionEmbeds(
 ): { embeds: EmbedBuilder[]; truncated: boolean } {
     const MAX_TOTAL_CHARACTERS = 5800;
     const MAX_PER_EMBED = 1800;
-    const sanitized = text && text.length ? text : '(empty)';
+    const sanitized = text && text.length ? text : `(empty)`;
     let working = sanitized;
     let truncated = false;
     if (working.length > MAX_TOTAL_CHARACTERS) {
@@ -24,13 +24,13 @@ export function buildDescriptionEmbeds(
     }
     const parts: string[] = chunkString(working, MAX_PER_EMBED);
     const embeds = parts.map((p: string, idx: number) => {
-        const note = truncated && idx === parts.length - 1 ? '\n\nPreview trimmed due to Discord limits.' : '';
+        const note = truncated && idx === parts.length - 1 ? `\n\nPreview trimmed due to Discord limits.` : ``;
         return new EmbedBuilder()
             .setTitle(
-                `Description v${version}${isPublic ? ' (public)' : ''}${parts.length > 1 ? ` [${idx + 1}/${parts.length}]` : ''}`,
+                `Description v${version}${isPublic ? ` (public)` : ``}${parts.length > 1 ? ` [${idx + 1}/${parts.length}]` : ``}`,
             )
             .setDescription(`${p}${note}`)
-            .setColor('Blue');
+            .setColor(`Blue`);
     });
     return { embeds, truncated };
 }

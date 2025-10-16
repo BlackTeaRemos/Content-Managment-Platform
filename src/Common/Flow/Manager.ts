@@ -56,9 +56,13 @@ export class FlowManager {
      */
     public async onInteraction(interaction: Interaction) {
         const userId = (interaction as any).user?.id;
-        if (!userId) return;
+        if (!userId) {
+            return;
+        }
         const instance = this.flows.get(userId);
-        if (!instance) return;
+        if (!instance) {
+            return;
+        }
         await instance.handleInteraction(interaction);
     }
 
@@ -70,7 +74,9 @@ export class FlowManager {
     public async onMessage(message: Message) {
         const userId = (message as any).author.id;
         const instance = this.flows.get(userId);
-        if (!instance) return;
+        if (!instance) {
+            return;
+        }
         await instance.handleMessage(message);
     }
 

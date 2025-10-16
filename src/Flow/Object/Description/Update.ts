@@ -13,15 +13,15 @@ export interface CreatedVersion {
  * Properties captured: creator (discord id), createdAt timestamp, version auto-increment.
  */
 export async function createDescriptionVersion(
-    refType: 'organization' | 'game' | 'user',
+    refType: `organization` | `game` | `user`,
     refUid: string,
     orgUid: string,
     text: string,
     creatorDiscordId: string,
 ): Promise<CreatedVersion> {
-    const session = await neo4jClient.GetSession('WRITE');
+    const session = await neo4jClient.GetSession(`WRITE`);
     try {
-        const uid = `desc_${randomUUID().replace(/-/g, '')}`;
+        const uid = `desc_${randomUUID().replace(/-/g, ``)}`;
         const now = new Date().toISOString();
         const query = `
             // Determine next version number in scope
@@ -70,7 +70,7 @@ export async function createDescriptionVersion(
             creator: creatorDiscordId,
             createdAt: now,
         });
-        const props = res.records[0].get('d').properties;
+        const props = res.records[0].get(`d`).properties;
         return {
             uid: String(props.uid),
             version: Number(props.version),

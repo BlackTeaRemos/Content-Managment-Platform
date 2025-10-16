@@ -13,8 +13,8 @@ async function main() {
         // Start the application
         const app = new DiscordApp();
         await app.Start();
-    } catch (err) {
-        console.error('Fatal error during application startup:', err);
+    } catch(err) {
+        console.error(`Fatal error during application startup:`, err);
         process.exit(1);
     }
 }

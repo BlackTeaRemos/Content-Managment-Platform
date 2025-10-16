@@ -14,7 +14,7 @@ export interface PolicyContext {
     userRoleIds: string[]; // discord role ids
     providedPassKeys?: string[]; // optional pass keys supplied with command
     requestTags?: string[]; // requested tag filters
-    mode?: 'DEFAULT' | 'FORCE_PUBLIC' | 'EPHEMERAL'; // disclosure mode hints
+    mode?: `DEFAULT` | `FORCE_PUBLIC` | `EPHEMERAL`; // disclosure mode hints
 }
 
 /**
@@ -22,7 +22,7 @@ export interface PolicyContext {
  */
 export interface PolicyResult {
     allowClosed: boolean; // whether closed segment is visible
-    disclosureMode: 'REDACTED' | 'MERGED' | 'EPHEMERAL'; // how to present output
+    disclosureMode: `REDACTED` | `MERGED` | `EPHEMERAL`; // how to present output
     reasons: string[]; // rationale lines for audit
 }
 

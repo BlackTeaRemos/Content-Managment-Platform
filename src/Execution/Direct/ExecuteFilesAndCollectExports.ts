@@ -88,7 +88,7 @@ async function searchFiles(root: string, patterns: RegExp[], options: SearchOpti
                     dirEntries = await fs.promises.readdir(task.dir, {
                         withFileTypes: true,
                     });
-                } catch (error) {
+                } catch(error) {
                     log.error(`Dir read failed ${task.dir}`, (error as Error).message, import.meta.filename);
                     throw new Error(`Directory access error: Failed to read directory at ${task.dir}`);
                 }
@@ -134,7 +134,7 @@ async function executeFile(filePath: string): Promise<any | null> {
         }
         log.info(`Loaded ${path.basename(filePath)}`, `keys=${JSON.stringify(keys)}`);
         return imported;
-    } catch (error) {
+    } catch(error) {
         log.error(`Import failed ${filePath}`, (error as Error).message, import.meta.filename);
         return null;
     }
@@ -173,7 +173,7 @@ export async function ExecuteFilesAndCollectExports(
         if (!stat.isDirectory()) {
             throw new Error(`Path ${dirPath} is not a directory`);
         }
-    } catch (error) {
+    } catch(error) {
         if ((error as NodeJS.ErrnoException).code === `ENOENT`) {
             throw new Error(`Directory not found: ${dirPath}`);
         }
