@@ -49,7 +49,9 @@ export interface EnsureCommandPermissionResult {
 }
 
 function __buildBaseContext(interaction: ChatInputCommandInteraction): TokenResolveContext {
-    const options = Object.fromEntries(interaction.options.data.map(o => [o.name, o.value]));
+    const options = Object.fromEntries(interaction.options.data.map(o => {
+        return [o.name, o.value];
+    }));
     return {
         commandName: interaction.commandName,
         guildId: interaction.guildId ?? undefined,
@@ -62,12 +64,16 @@ async function __getMember(
     interaction: ChatInputCommandInteraction,
     provided: GuildMember | null | undefined,
 ): Promise<GuildMember | null> {
-    if (provided !== undefined) return provided ?? null;
-    if (!interaction.guild) return null;
+    if (provided !== undefined) {
+        return provided ?? null;
+    }
+    if (!interaction.guild) {
+        return null;
+    }
     try {
         return await interaction.guild.members.fetch(interaction.user.id);
-    } catch (error) {
-        log.warning(`Failed to fetch guild member: ${String(error)}`, 'PermissionGuard', 'ensureCommandPermission');
+    } catch(error) {
+        log.warning(`Failed to fetch guild member: ${String(error)}`, `PermissionGuard`, `ensureCommandPermission`);
         return null;
     }
 }
@@ -91,7 +97,9 @@ export async function ensureCommandPermission(
         permissions: options.permissions,
         // Keep approval disabled inside flows; commands must trigger interactive approval.
         skipApproval: true,
-        getMember: () => __getMember(interaction, options.member),
+        getMember: () => {
+            return __getMember(interaction, options.member);
+        },
     };
 
     if (options.member !== undefined) {

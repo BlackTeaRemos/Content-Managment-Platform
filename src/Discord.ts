@@ -39,63 +39,69 @@ export class DiscordService {
      */
     constructor(client: Client, guildId: string, categoryId: string, discordToken: string) {
         this.client = client;
-        this.client.on('raw', (packet: any) => {
+        this.client.on(`raw`, (packet: any) => {
             // packet.t is the event name, packet.d is the data
             // log.debug(`Raw event ${packet.t}: ${JSON.stringify(packet.d)}`, 'DiscordService');
         });
         // Listen for all error events
-        this.client.on('error', err => {
+        this.client.on(`error`, err => {
             log.error(
                 `Client error event: ${err instanceof Error ? err.stack || err.message : String(err)}`,
-                'DiscordService',
+                `DiscordService`,
             );
         });
 
-        this.client.on('shardError', err => {
+        this.client.on(`shardError`, err => {
             log.error(
                 `Shard error event: ${err instanceof Error ? err.stack || err.message : String(err)}`,
-                'DiscordService',
+                `DiscordService`,
             );
         });
 
-        this.client.on('debug', info => {
-            log.debug(`Debug: ${info}`, 'DiscordService');
+        this.client.on(`debug`, info => {
+            log.debug(`Debug: ${info}`, `DiscordService`);
         });
 
-        this.client.on('warn', info => {
-            log.warning(`Warning: ${info}`, 'DiscordService');
+        this.client.on(`warn`, info => {
+            log.warning(`Warning: ${info}`, `DiscordService`);
         });
 
-        this.client.once(Events.ClientReady, async () => {
+        this.client.once(Events.ClientReady, async() => {
             try {
                 // Fetch the guild (server) and log it
                 const guild = await this.client.guilds.fetch(guildId);
                 this._guild = guild;
-                log.info(`Connected to guild: ${guild.name} (${guild.id})`, 'DiscordService');
+                log.info(`Connected to guild: ${guild.name} (${guild.id})`, `DiscordService`);
 
                 // Fetch the category and log it
                 const category = await this.client.channels.fetch(categoryId);
 
                 if (!category || category.type !== ChannelType.GuildCategory) {
-                    throw new Error('Category not found or not a category');
+                    throw new Error(`Category not found or not a category`);
                 }
                 this._category = category as CategoryChannel;
-                log.info(`Using category: ${category.name} (${category.id})`, 'DiscordService');
+                log.info(`Using category: ${category.name} (${category.id})`, `DiscordService`);
 
                 // Fetch all text channels in the category
                 const allChannels = (category as CategoryChannel).children.cache.filter(
-                    (ch: any) => ch.type === ChannelType.GuildText,
+                    (ch: any) => {
+                        return ch.type === ChannelType.GuildText;
+                    },
                 );
                 this._channels = Array.from(allChannels.values()) as TextChannel[];
-                log.info(`Found ${this._channels.length} text channel(s) in category.`, 'DiscordService');
-                this._channels.forEach(ch => log.info(`Channel: ${ch.name} (${ch.id})`, 'DiscordService'));
+                log.info(`Found ${this._channels.length} text channel(s) in category.`, `DiscordService`);
+                this._channels.forEach(ch => {
+                    return log.info(`Channel: ${ch.name} (${ch.id})`, `DiscordService`);
+                });
 
                 // Check for any cmd- channel, create one if missing
-                let cmdChannel = this._channels.find(ch => ch.name.startsWith('cmd-'));
+                let cmdChannel = this._channels.find(ch => {
+                    return ch.name.startsWith(`cmd-`);
+                });
 
                 if (!cmdChannel) {
                     const uniqueName = `cmd-bot`;
-                    log.info(`No cmd- channel found, creating '${uniqueName}'...`, 'DiscordService');
+                    log.info(`No cmd- channel found, creating '${uniqueName}'...`, `DiscordService`);
 
                     try {
                         cmdChannel = await (category as CategoryChannel).guild.channels.create({
@@ -104,91 +110,95 @@ export class DiscordService {
                             parent: category.id,
                         });
                         this._channels.push(cmdChannel);
-                        log.info(`'${uniqueName}' channel created.`, 'DiscordService');
-                    } catch (err) {
+                        log.info(`'${uniqueName}' channel created.`, `DiscordService`);
+                    } catch(err) {
                         log.error(
                             `Failed to create cmd- channel: ${err instanceof Error ? err.stack || err.message : String(err)}`,
-                            'DiscordService',
+                            `DiscordService`,
                         );
                     }
                 }
 
-                MAIN_EVENT_BUS.emit('discord:ready', this.client, this._category, this._channels);
-            } catch (err) {
+                MAIN_EVENT_BUS.emit(`discord:ready`, this.client, this._category, this._channels);
+            } catch(err) {
                 log.error(
                     `Error during ready event: ${err instanceof Error ? err.stack || err.message : String(err)}`,
-                    'DiscordService',
+                    `DiscordService`,
                 );
-                MAIN_EVENT_BUS.emit('discord:error', err);
+                MAIN_EVENT_BUS.emit(`discord:error`, err);
             }
         });
 
         this.client.on(Events.MessageCreate, msg => {
             // Extensive logging for every message received, regardless of channel
             const isSelf = msg.author.id === this.client.user?.id;
-            const inCategory = this._channels.some(ch => ch.id === msg.channel.id);
+            const inCategory = this._channels.some(ch => {
+                return ch.id === msg.channel.id;
+            });
             // Compose a detailed log message
             const logLines = [
                 `\n--- MESSAGE RECEIVED ---`,
                 `Channel: #${(msg.channel as TextChannel).name} (${msg.channel.id})`,
-                `Author: ${msg.author.username} (${msg.author.id})${isSelf ? ' (self)' : ''}`,
+                `Author: ${msg.author.username} (${msg.author.id})${isSelf ? ` (self)` : ``}`,
                 `Content: ${msg.content}`,
-                `Created at: ${msg.createdAt.toISOString()} | Edited: ${msg.editedAt ? msg.editedAt.toISOString() : 'never'}`,
+                `Created at: ${msg.createdAt.toISOString()} | Edited: ${msg.editedAt ? msg.editedAt.toISOString() : `never`}`,
                 `Attachments: ${
                     msg.attachments.size > 0
                         ? Array.from(msg.attachments.values())
-                              .map(a => a.url)
-                              .join(', ')
-                        : 'none'
+                              .map(a => {
+                                  return a.url;
+                              })
+                              .join(`, `)
+                        : `none`
                 }`,
                 `Embeds: ${msg.embeds.length}`,
                 `Mentions: ${msg.mentions.users.size} user(s), ${msg.mentions.roles.size} role(s)`,
                 `Message type: ${msg.type}`,
-                `Webhook: ${msg.webhookId ? 'yes' : 'no'}`,
-                `In expected category: ${inCategory ? 'yes' : 'NOPE'}`,
+                `Webhook: ${msg.webhookId ? `yes` : `no`}`,
+                `In expected category: ${inCategory ? `yes` : `NOPE`}`,
             ];
 
             if (!inCategory) {
-                logLines.push('WARNING: Message is NOT in the expected category. Are you lost?');
+                logLines.push(`WARNING: Message is NOT in the expected category. Are you lost?`);
             }
 
             if (!msg.content && msg.attachments.size === 0 && msg.embeds.length === 0) {
-                logLines.push('...An empty message. Inspiring.');
+                logLines.push(`...An empty message. Inspiring.`);
             }
-            log.info(logLines.join('\n'), 'DiscordService');
+            log.info(logLines.join(`\n`), `DiscordService`);
 
             // Emit raw message event for all messages in the category
             if (inCategory) {
-                MAIN_EVENT_BUS.emit('discord:message:raw', msg);
+                MAIN_EVENT_BUS.emit(`discord:message:raw`, msg);
             }
         });
 
         // Wrap send for all text channels to log when the bot sends a message
         const _this = this;
         const origSend = TextChannel.prototype.send;
-        TextChannel.prototype.send = async function (
+        TextChannel.prototype.send = async function(
             ...args: [string | import('discord.js').MessagePayload | import('discord.js').MessageCreateOptions]
         ) {
             const content = args[0];
             // Log the outgoing message
             log.info(
-                `Bot sending message to #${this.name} (${this.id}): ${typeof content === 'string' ? content : '[embed or object]'}`,
-                'DiscordService',
+                `Bot sending message to #${this.name} (${this.id}): ${typeof content === `string` ? content : `[embed or object]`}`,
+                `DiscordService`,
             );
 
             try {
                 const result = await origSend.apply(this, [content]);
                 return result;
-            } catch (err) {
+            } catch(err) {
                 log.error(
                     `Error sending message: ${err instanceof Error ? err.stack || err.message : String(err)}`,
-                    'DiscordService',
+                    `DiscordService`,
                 );
                 throw err;
             }
         };
 
-        log.info('Attempting to login...', 'DiscordService');
+        log.info(`Attempting to login...`, `DiscordService`);
 
         try {
             RegisterDiscordClient(this.client);

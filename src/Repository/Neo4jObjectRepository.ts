@@ -32,7 +32,7 @@ export class Neo4jObjectRepository implements ObjectRepository {
     /** Create a new object node and initial transaction. */
     async Create(envelope: ObjectEnvelope, initialTx: TransactionRecord): Promise<ObjectEnvelope> {
         await this.Init();
-        const session = await this._client.GetSession('WRITE');
+        const session = await this._client.GetSession(`WRITE`);
 
         try {
             const result = await session.executeWrite(async tx => {
@@ -69,11 +69,11 @@ export class Neo4jObjectRepository implements ObjectRepository {
                     txProps,
                 };
                 const res = await tx.run(query, params);
-                return res.records[0]?.get('obj') ?? null;
+                return res.records[0]?.get(`obj`) ?? null;
             });
 
             if (!result) {
-                throw new Error('Failed to create object');
+                throw new Error(`Failed to create object`);
             }
             return envelope;
         } finally {
@@ -84,14 +84,14 @@ export class Neo4jObjectRepository implements ObjectRepository {
     /** Retrieve latest snapshot for an id. */
     async Get(id: string): Promise<ObjectEnvelope | null> {
         await this.Init();
-        const session = await this._client.GetSession('READ');
+        const session = await this._client.GetSession(`READ`);
 
         try {
             const query = `
         MATCH (o:VPIObject { id: $id, guildId: $guildId })
         RETURN o AS obj`;
             const res = await session.run(query, { id, guildId: this._guildId });
-            const node = res.records[0]?.get('obj');
+            const node = res.records[0]?.get(`obj`);
             return node ? (node.properties as unknown as ObjectEnvelope) : null;
         } finally {
             await session.close();
@@ -101,7 +101,7 @@ export class Neo4jObjectRepository implements ObjectRepository {
     /** Apply an update by bumping version, writing tx and updating fields. */
     async Update(id: string, txRec: TransactionRecord): Promise<ObjectEnvelope> {
         await this.Init();
-        const session = await this._client.GetSession('WRITE');
+        const session = await this._client.GetSession(`WRITE`);
 
         try {
             const result = await session.executeWrite(async tx => {
@@ -129,17 +129,17 @@ export class Neo4jObjectRepository implements ObjectRepository {
                     txProps: { ...txRec },
                 };
                 const res = await tx.run(query, params);
-                return res.records[0]?.get('obj') ?? null;
+                return res.records[0]?.get(`obj`) ?? null;
             });
 
             if (!result) {
-                throw new Error('Update failed – object not found');
+                throw new Error(`Update failed – object not found`);
             }
             // Return fresh snapshot
             const latest = await this.Get(id);
 
             if (!latest) {
-                throw new Error('Updated object not found after write');
+                throw new Error(`Updated object not found after write`);
             }
             return latest;
         } finally {
@@ -156,7 +156,7 @@ export class Neo4jObjectRepository implements ObjectRepository {
         await this.Init();
         const pageSize = filter?.cursor?.pageSize ?? 50;
         const offset = filter?.cursor?.offset ?? 0;
-        const session = await this._client.GetSession('READ');
+        const session = await this._client.GetSession(`READ`);
 
         try {
             const query = `
@@ -174,8 +174,10 @@ export class Neo4jObjectRepository implements ObjectRepository {
                 offset,
                 limit: pageSize,
             });
-            const nodes = (res.records[0]?.get('objs') ?? []) as any[];
-            const objects = nodes.map(n => n.properties as ObjectEnvelope);
+            const nodes = (res.records[0]?.get(`objs`) ?? []) as any[];
+            const objects = nodes.map(n => {
+                return n.properties as ObjectEnvelope;
+            });
             const nextCursor = objects.length === pageSize ? { offset: offset + pageSize, pageSize } : undefined;
             return { objects, nextCursor };
         } finally {
@@ -186,7 +188,7 @@ export class Neo4jObjectRepository implements ObjectRepository {
     /** Return appended transactions for an object. */
     async History(id: string, fromVersion?: number, toVersion?: number): Promise<TransactionRecord[]> {
         await this.Init();
-        const session = await this._client.GetSession('READ');
+        const session = await this._client.GetSession(`READ`);
 
         try {
             const query = `
@@ -200,7 +202,9 @@ export class Neo4jObjectRepository implements ObjectRepository {
                 from: fromVersion ?? null,
                 to: toVersion ?? null,
             });
-            return res.records.map(r => (r.get('t') as any).properties as TransactionRecord);
+            return res.records.map(r => {
+                return (r.get(`t`) as any).properties as TransactionRecord;
+            });
         } finally {
             await session.close();
         }

@@ -32,19 +32,21 @@ export interface ResolveCommandPermissionOptions {
 export async function resolveCommandPermission(
     options: ResolveCommandPermissionOptions,
 ): Promise<CommandPermissionResult> {
-    const { interaction, templates, context = {}, logSource, action = 'command' } = options;
+    const { interaction, templates, context = {}, logSource, action = `command` } = options;
     const baseContext: TokenResolveContext = {
         commandName: interaction.commandName,
         guildId: interaction.guildId ?? undefined,
         userId: interaction.user.id,
-        options: Object.fromEntries(interaction.options.data.map(o => [o.name, o.value])),
+        options: Object.fromEntries(interaction.options.data.map(o => {
+            return [o.name, o.value];
+        })),
         ...context,
     };
 
     log.info(
         `${logSource}: resolving permissions for action=${action} user=${interaction.user.id}`,
         logSource,
-        'resolveCommandPermission',
+        `resolveCommandPermission`,
     );
 
     // Flows should not perform interactive approval. Ask ensure to evaluate permissions
@@ -60,7 +62,7 @@ export async function resolveCommandPermission(
     log.info(
         `${logSource}: permission result action=${action} success=${outcome.success} reason=${outcome.detail.reason}`,
         logSource,
-        'resolveCommandPermission',
+        `resolveCommandPermission`,
     );
 
     return {
@@ -78,7 +80,7 @@ async function getMember(
     action: string,
 ): Promise<GuildMember | null> {
     if (!interaction.guild) {
-        log.info(`${logSource}: no guild context for action=${action}`, logSource, 'resolveCommandPermission');
+        log.info(`${logSource}: no guild context for action=${action}`, logSource, `resolveCommandPermission`);
         return null;
     }
     try {
@@ -86,14 +88,14 @@ async function getMember(
         log.info(
             `${logSource}: fetched guild member ${member.id} for action=${action}`,
             logSource,
-            'resolveCommandPermission',
+            `resolveCommandPermission`,
         );
         return member;
-    } catch (error) {
+    } catch(error) {
         log.warning(
             `${logSource}: failed to fetch guild member for action=${action} reason=${String(error)}`,
             logSource,
-            'resolveCommandPermission',
+            `resolveCommandPermission`,
         );
         return null;
     }

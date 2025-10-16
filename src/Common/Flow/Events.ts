@@ -8,38 +8,48 @@ import type { FlowStep, StepContext } from './Types.js';
 
 export type FlowEventId = (string | number | boolean | undefined)[];
 
-export const FLOW_NAMESPACE = 'flow' as const;
+export const FLOW_NAMESPACE = `flow` as const;
 
-export const flowStepPromptId = (userId: string, stepIndex: number): FlowEventId => [
-    FLOW_NAMESPACE,
-    userId,
-    'step',
-    stepIndex,
-    'prompt',
-];
-export const flowStepInteractionId = (userId: string, stepIndex: number): FlowEventId => [
-    FLOW_NAMESPACE,
-    userId,
-    'step',
-    stepIndex,
-    'interaction',
-];
-export const flowStepMessageId = (userId: string, stepIndex: number): FlowEventId => [
-    FLOW_NAMESPACE,
-    userId,
-    'step',
-    stepIndex,
-    'message',
-];
-export const flowAdvanceId = (userId: string): FlowEventId => [FLOW_NAMESPACE, userId, 'advance'];
-export const flowCancelId = (userId: string): FlowEventId => [FLOW_NAMESPACE, userId, 'cancel'];
+export const flowStepPromptId = (userId: string, stepIndex: number): FlowEventId => {
+    return [
+        FLOW_NAMESPACE,
+        userId,
+        `step`,
+        stepIndex,
+        `prompt`,
+    ];
+};
+export const flowStepInteractionId = (userId: string, stepIndex: number): FlowEventId => {
+    return [
+        FLOW_NAMESPACE,
+        userId,
+        `step`,
+        stepIndex,
+        `interaction`,
+    ];
+};
+export const flowStepMessageId = (userId: string, stepIndex: number): FlowEventId => {
+    return [
+        FLOW_NAMESPACE,
+        userId,
+        `step`,
+        stepIndex,
+        `message`,
+    ];
+};
+export const flowAdvanceId = (userId: string): FlowEventId => {
+    return [FLOW_NAMESPACE, userId, `advance`];
+};
+export const flowCancelId = (userId: string): FlowEventId => {
+    return [FLOW_NAMESPACE, userId, `cancel`];
+};
 
 // Wildcard listener ids useful for registering generic listeners
-export const anyStepPromptId: FlowEventId = [FLOW_NAMESPACE, undefined, 'step', undefined, 'prompt'];
-export const anyStepInteractionId: FlowEventId = [FLOW_NAMESPACE, undefined, 'step', undefined, 'interaction'];
-export const anyStepMessageId: FlowEventId = [FLOW_NAMESPACE, undefined, 'step', undefined, 'message'];
-export const anyAdvanceId: FlowEventId = [FLOW_NAMESPACE, undefined, 'advance'];
-export const anyCancelId: FlowEventId = [FLOW_NAMESPACE, undefined, 'cancel'];
+export const anyStepPromptId: FlowEventId = [FLOW_NAMESPACE, undefined, `step`, undefined, `prompt`];
+export const anyStepInteractionId: FlowEventId = [FLOW_NAMESPACE, undefined, `step`, undefined, `interaction`];
+export const anyStepMessageId: FlowEventId = [FLOW_NAMESPACE, undefined, `step`, undefined, `message`];
+export const anyAdvanceId: FlowEventId = [FLOW_NAMESPACE, undefined, `advance`];
+export const anyCancelId: FlowEventId = [FLOW_NAMESPACE, undefined, `cancel`];
 
 // Payloads carried through the event bus. These are runtime-validated by usage; typings here are for developer guidance.
 

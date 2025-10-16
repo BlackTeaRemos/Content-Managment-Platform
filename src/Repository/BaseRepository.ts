@@ -204,7 +204,7 @@ export abstract class BaseRepository<T extends Neo4jStorable> {
             const createdEntity = this.neo4jToDomain(createdNode);
 
             return { success: true, data: createdEntity };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : `Unknown error occurred`,
@@ -232,7 +232,7 @@ export abstract class BaseRepository<T extends Neo4jStorable> {
             const entity = this.neo4jToDomain(node);
 
             return { success: true, data: entity };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : `Unknown error occurred`,
@@ -275,7 +275,7 @@ export abstract class BaseRepository<T extends Neo4jStorable> {
             });
 
             return { success: true, data: entities };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : `Unknown error occurred`,
@@ -328,7 +328,7 @@ export abstract class BaseRepository<T extends Neo4jStorable> {
             const updatedEntity = this.neo4jToDomain(updatedNode);
 
             return { success: true, data: updatedEntity };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : `Unknown error occurred`,
@@ -351,7 +351,7 @@ export abstract class BaseRepository<T extends Neo4jStorable> {
             const deleted = (result.records[0]?.get(`deleted`) as number) || 0;
 
             return { success: true, data: deleted > 0 };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : `Unknown error occurred`,
@@ -385,7 +385,7 @@ export abstract class BaseRepository<T extends Neo4jStorable> {
             const count = (result.records[0]?.get(`count`) as number) || 0;
 
             return { success: true, data: count };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : `Unknown error occurred`,
@@ -404,7 +404,7 @@ export abstract class BaseRepository<T extends Neo4jStorable> {
         try {
             const result = await session.executeWrite(async tx => {
                 const txContext: Neo4jTransactionContext = {
-                    run: async (query: string, params?: Record<string, any>) => {
+                    run: async(query: string, params?: Record<string, any>) => {
                         const res = await tx.run(query, params || {});
                         return {
                             success: true,
@@ -412,10 +412,10 @@ export abstract class BaseRepository<T extends Neo4jStorable> {
                             metadata: res.summary,
                         };
                     },
-                    commit: async () => {
+                    commit: async() => {
                         /* Transaction will be committed automatically */
                     },
-                    rollback: async () => {
+                    rollback: async() => {
                         /* Transaction will be rolled back on error */
                     },
                     isActive: () => {
@@ -427,7 +427,7 @@ export abstract class BaseRepository<T extends Neo4jStorable> {
             });
 
             return { success: true, data: result };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : `Transaction failed`,

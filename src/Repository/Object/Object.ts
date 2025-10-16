@@ -26,48 +26,48 @@ import type { Neo4jObjectSchema, Neo4jRepositoryOptions, Neo4jQueryResult } from
  * Schema definition for DBObject to Neo4j mapping.
  */
 const dbObjectSchema: Neo4jObjectSchema<DBObject> = {
-    primaryLabel: 'DBObject',
-    additionalLabels: ['Entity'],
+    primaryLabel: `DBObject`,
+    additionalLabels: [`Entity`],
     propertyMappings: {
         id: {
-            neo4jName: 'id',
+            neo4jName: `id`,
             required: true,
         },
         uid: {
-            neo4jName: 'uid',
+            neo4jName: `uid`,
             required: true,
         },
         name: {
-            neo4jName: 'name',
+            neo4jName: `name`,
             required: true,
         },
         friendly_name: {
-            neo4jName: 'friendly_name',
+            neo4jName: `friendly_name`,
             required: false,
-            defaultValue: '',
+            defaultValue: ``,
         },
     },
     indexes: [
         {
-            name: 'dbobject_uid_unique',
-            properties: ['uid'],
+            name: `dbobject_uid_unique`,
+            properties: [`uid`],
             unique: true,
         },
         {
-            name: 'dbobject_name_index',
-            properties: ['name'],
+            name: `dbobject_name_index`,
+            properties: [`name`],
         },
     ],
     constraints: [
         {
-            name: 'dbobject_uid_required',
-            type: 'EXISTENCE',
-            properties: ['uid'],
+            name: `dbobject_uid_required`,
+            type: `EXISTENCE`,
+            properties: [`uid`],
         },
         {
-            name: 'dbobject_name_required',
-            type: 'EXISTENCE',
-            properties: ['name'],
+            name: `dbobject_name_required`,
+            type: `EXISTENCE`,
+            properties: [`name`],
         },
     ],
 };
@@ -96,8 +96,8 @@ export class ObjectRepository extends BaseRepository<DBObject> {
         options: { limit?: number; skip?: number } = {},
     ): Promise<Neo4jQueryResult<DBObject[]>> {
         try {
-            const session = await this.client.GetSession('READ');
-            const labels = this.getLabels().join(':');
+            const session = await this.client.GetSession(`READ`);
+            const labels = this.getLabels().join(`:`);
 
             const query = `
                 MATCH (n:${labels})
@@ -116,15 +116,15 @@ export class ObjectRepository extends BaseRepository<DBObject> {
             await session.close();
 
             const entities = result.records.map(record => {
-                const node = record.get('n') as any;
+                const node = record.get(`n`) as any;
                 return this.neo4jToDomain(node);
             });
 
             return { success: true, data: entities };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error occurred',
+                error: error instanceof Error ? error.message : `Unknown error occurred`,
             };
         }
     }
@@ -139,11 +139,11 @@ export class ObjectRepository extends BaseRepository<DBObject> {
         options: { limit?: number; skip?: number } = {},
     ): Promise<Neo4jQueryResult<DBObject[]>> {
         try {
-            const session = await this.client.GetSession('READ');
-            const labels = this.getLabels().join(':');
+            const session = await this.client.GetSession(`READ`);
+            const labels = this.getLabels().join(`:`);
 
             // Convert simple wildcard pattern to regex
-            const regexPattern = uidPattern.replace(/\*/g, '.*').replace(/\?/g, '.');
+            const regexPattern = uidPattern.replace(/\*/g, `.*`).replace(/\?/g, `.`);
 
             const query = `
                 MATCH (n:${labels})
@@ -161,15 +161,15 @@ export class ObjectRepository extends BaseRepository<DBObject> {
             await session.close();
 
             const entities = result.records.map(record => {
-                const node = record.get('n') as any;
+                const node = record.get(`n`) as any;
                 return this.neo4jToDomain(node);
             });
 
             return { success: true, data: entities };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error occurred',
+                error: error instanceof Error ? error.message : `Unknown error occurred`,
             };
         }
     }
@@ -178,10 +178,10 @@ export class ObjectRepository extends BaseRepository<DBObject> {
      * Create multiple objects in a batch operation.
      * @param objects Array of objects to create
      */
-    async createBatch(objects: Omit<DBObject, 'uid'>[]): Promise<Neo4jQueryResult<DBObject[]>> {
+    async createBatch(objects: Omit<DBObject, `uid`>[]): Promise<Neo4jQueryResult<DBObject[]>> {
         return this.executeInTransaction(async tx => {
             const createdObjects: DBObject[] = [];
-            const labels = this.getLabels().join(':');
+            const labels = this.getLabels().join(`:`);
 
             for (const obj of objects) {
                 const fullObject: DBObject = {
@@ -193,7 +193,7 @@ export class ObjectRepository extends BaseRepository<DBObject> {
                 const result = await tx.run(`CREATE (n:${labels} $props) RETURN n`, { props: properties });
 
                 if (result.data && result.data.length > 0) {
-                    const node = result.data[0].get('n') as any;
+                    const node = result.data[0].get(`n`) as any;
                     createdObjects.push(this.neo4jToDomain(node));
                 }
             }
@@ -212,15 +212,17 @@ export class ObjectRepository extends BaseRepository<DBObject> {
         relationshipTypes: string[] = [],
     ): Promise<Neo4jQueryResult<{ object: DBObject; relationships: any[] } | null>> {
         try {
-            const session = await this.client.GetSession('READ');
-            const labels = this.getLabels().join(':');
+            const session = await this.client.GetSession(`READ`);
+            const labels = this.getLabels().join(`:`);
 
-            let relationshipClause = '';
+            let relationshipClause = ``;
             if (relationshipTypes.length > 0) {
-                const types = relationshipTypes.map(type => `r:${type}`).join('|');
+                const types = relationshipTypes.map(type => {
+                    return `r:${type}`;
+                }).join(`|`);
                 relationshipClause = `OPTIONAL MATCH (n)-[r:${types}]-(related) RETURN n, collect({relationship: type(r), direction: 'outgoing', related: related}) as outgoing_rels, collect({relationship: type(r), direction: 'incoming', related: related}) as incoming_rels`;
             } else {
-                relationshipClause = 'RETURN n, [] as outgoing_rels, [] as incoming_rels';
+                relationshipClause = `RETURN n, [] as outgoing_rels, [] as incoming_rels`;
             }
 
             const query = `
@@ -236,9 +238,9 @@ export class ObjectRepository extends BaseRepository<DBObject> {
             }
 
             const record = result.records[0];
-            const node = record.get('n') as any;
-            const outgoingRels = record.get('outgoing_rels') || [];
-            const incomingRels = record.get('incoming_rels') || [];
+            const node = record.get(`n`) as any;
+            const outgoingRels = record.get(`outgoing_rels`) || [];
+            const incomingRels = record.get(`incoming_rels`) || [];
 
             const object = this.neo4jToDomain(node);
             const relationships = [...outgoingRels, ...incomingRels];
@@ -247,10 +249,10 @@ export class ObjectRepository extends BaseRepository<DBObject> {
                 success: true,
                 data: { object, relationships },
             };
-        } catch (error) {
+        } catch(error) {
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error occurred',
+                error: error instanceof Error ? error.message : `Unknown error occurred`,
             };
         }
     }

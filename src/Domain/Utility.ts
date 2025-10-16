@@ -8,20 +8,20 @@
  * Extend as new events are introduced.
  */
 export const EVENT_NAMES = {
-    guildProvisioned: 'guild.provisioned',
-    objectCreated: 'object.created',
-    objectUpdated: 'object.updated',
-    objectDeleted: 'object.deleted',
-    indexUpdated: 'index.updated',
-    commandLoaded: 'command.loaded',
-    commandReloaded: 'command.reloaded',
-    editSessionStarted: 'edit.session.started',
-    editSessionEnded: 'edit.session.ended',
-    securityPolicyCheck: 'security.policyCheck',
-    automationTaskExecuted: 'automation.task.executed',
-    automationViewGenerated: 'automation.view.generated',
-    triggerExecuted: 'trigger.executed',
-    scriptExecuted: 'script.executed',
+    guildProvisioned: `guild.provisioned`,
+    objectCreated: `object.created`,
+    objectUpdated: `object.updated`,
+    objectDeleted: `object.deleted`,
+    indexUpdated: `index.updated`,
+    commandLoaded: `command.loaded`,
+    commandReloaded: `command.reloaded`,
+    editSessionStarted: `edit.session.started`,
+    editSessionEnded: `edit.session.ended`,
+    securityPolicyCheck: `security.policyCheck`,
+    automationTaskExecuted: `automation.task.executed`,
+    automationViewGenerated: `automation.view.generated`,
+    triggerExecuted: `trigger.executed`,
+    scriptExecuted: `script.executed`,
 } as const;
 
 /** Type union of event string literals. */

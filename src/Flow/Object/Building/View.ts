@@ -7,7 +7,7 @@ import { Factory } from './Create.js';
  * @returns Factory properties or null if not found
  */
 export async function getFactory(uid: string): Promise<Factory | null> {
-    const session = await neo4jClient.GetSession('READ');
+    const session = await neo4jClient.GetSession(`READ`);
     try {
         const query = `
             MATCH (f:Factory { uid: $uid })
@@ -18,14 +18,14 @@ export async function getFactory(uid: string): Promise<Factory | null> {
         if (!record) {
             return null;
         }
-        const node = record.get('f');
+        const node = record.get(`f`);
         const props = node.properties;
-        const orgUid = record.get('orgUid') as string | null;
+        const orgUid = record.get(`orgUid`) as string | null;
         return {
             uid: props.uid,
             type: props.type,
             description: props.description,
-            organizationUid: orgUid || '',
+            organizationUid: orgUid || ``,
         };
     } finally {
         await session.close();

@@ -10,7 +10,7 @@ import type { EventIdentifier, EventIdentifierSubset } from '../ComplexEventEmit
  * @example
  * const nextState: PermissionState = 'allowed';
  */
-export type PermissionState = 'undefined' | 'forbidden' | 'once' | 'allowed';
+export type PermissionState = `undefined` | `forbidden` | `once` | `allowed`;
 
 /**
  * Describes a permission map where keys are tokens and values define behaviour.
@@ -57,7 +57,7 @@ export interface PermissionCheckResult {
  * @example
  * const decision: PermissionDecision = 'approve_once';
  */
-export type PermissionDecision = 'approve_once' | 'approve_forever' | 'deny' | 'no_admin' | 'timeout';
+export type PermissionDecision = `approve_once` | `approve_forever` | `deny` | `no_admin` | `timeout`;
 
 /**
  * Payload emitted while evaluating tokens through ComplexEventEmitter.

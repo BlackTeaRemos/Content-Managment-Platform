@@ -121,14 +121,16 @@ export class CommandRegistry {
         try {
             // Ensure a concrete executionContext exists (docs guarantee automatic creation)
             try {
-                if (!ctx.executionContext) (ctx as any).executionContext = createExecutionContext();
+                if (!ctx.executionContext) {
+                    (ctx as any).executionContext = createExecutionContext();
+                }
             } catch {
                 // ignore - defensive in case the ctx shape is unexpected at runtime
             }
 
             // Respect DM allowance from meta
-            if (!mod.meta.permissions?.allowDM && (!ctx.guildId || ctx.guildId === '')) {
-                return { ok: false, error: 'DM_NOT_ALLOWED', message: 'Command cannot be used in DMs' };
+            if (!mod.meta.permissions?.allowDM && (!ctx.guildId || ctx.guildId === ``)) {
+                return { ok: false, error: `DM_NOT_ALLOWED`, message: `Command cannot be used in DMs` };
             }
 
             // Simple role-based check retained for backwards compatibility
@@ -138,22 +140,26 @@ export class CommandRegistry {
                     (ctx.options && (ctx.options as any).__userRoles) ?? opts?.userRoles;
 
                 if (!providedRoles && !opts?.member) {
-                    return { ok: false, error: 'MISSING_ROLES', message: 'Role information not provided' };
+                    return { ok: false, error: `MISSING_ROLES`, message: `Role information not provided` };
                 }
 
                 let hasRole = false;
                 if (Array.isArray(providedRoles)) {
-                    hasRole = providedRoles.some(r => required.includes(r));
+                    hasRole = providedRoles.some(r => {
+                        return required.includes(r);
+                    });
                 } else if (opts?.member) {
                     const mem: any = opts.member;
                     const memRoles = mem.roles?.cache ? Array.from(mem.roles.cache.keys()) : (mem.roles ?? []);
                     if (Array.isArray(memRoles)) {
-                        hasRole = memRoles.some(r => required.includes(r));
+                        hasRole = memRoles.some(r => {
+                            return required.includes(r);
+                        });
                     }
                 }
 
                 if (!hasRole) {
-                    return { ok: false, error: 'MISSING_ROLES', message: 'User lacks required roles' };
+                    return { ok: false, error: `MISSING_ROLES`, message: `User lacks required roles` };
                 }
             }
 
@@ -167,12 +173,14 @@ export class CommandRegistry {
                 // in a programmatic context that is not a Discord interaction. Fall back to
                 // the canonical command token in that case.
                 const templates: (string | any[])[] = [];
-                if (typeof rawTemplates === 'function') {
+                if (typeof rawTemplates === `function`) {
                     templates.push(`command:${mod.meta.id}`);
-                } else if (typeof rawTemplates === 'string') {
+                } else if (typeof rawTemplates === `string`) {
                     templates.push(rawTemplates);
                 } else if (Array.isArray(rawTemplates)) {
-                    for (const entry of rawTemplates) templates.push(entry as string | any[]);
+                    for (const entry of rawTemplates) {
+                        templates.push(entry as string | any[]);
+                    }
                 }
 
                 // Build resolver context from the execution context. Include a getMember helper
@@ -184,8 +192,10 @@ export class CommandRegistry {
                     userId: ctx.userId,
                     guildId: ctx.guildId ?? undefined,
                     executionContext: ctx.executionContext,
-                    getMember: async () => {
-                        if (opts?.member) return opts.member;
+                    getMember: async() => {
+                        if (opts?.member) {
+                            return opts.member;
+                        }
                         // Best-effort: if ctx contains a guildId and the registry has access to a
                         // guild fetcher it could be used here; leave as null for now when not available.
                         return null;
@@ -199,14 +209,18 @@ export class CommandRegistry {
                     const resolved = resolvePermission(tmpl as any, resolverCtx as any);
                     for (const token of resolved) {
                         const display = formatPermissionToken(token);
-                        if (seen.has(display)) continue;
+                        if (seen.has(display)) {
+                            continue;
+                        }
                         seen.add(display);
                         tokens.push(token);
                     }
                 }
 
                 const inputs: PermissionTokenInput[] = tokens.length
-                    ? tokens.map(t => [...t])
+                    ? tokens.map(t => {
+                        return [...t];
+                    })
                     : [`command:${mod.meta.id}`];
 
                 // Build a minimal member-like object when none provided so permanent grants can be checked
@@ -215,7 +229,9 @@ export class CommandRegistry {
                     member = {
                         id: ctx.userId,
                         guild: { id: ctx.guildId },
-                        permissions: { has: (_: any) => false },
+                        permissions: { has: (_: any) => {
+                            return false;
+                        } },
                     } as unknown as GuildMember;
                 }
 
@@ -228,23 +244,25 @@ export class CommandRegistry {
                         // Programmatic callers cannot request interactive admin approval here.
                         return {
                             ok: false,
-                            error: 'PERMISSION_REQUIRES_APPROVAL',
-                            message: evaluation.reason ?? 'Permission requires approval',
+                            error: `PERMISSION_REQUIRES_APPROVAL`,
+                            message: evaluation.reason ?? `Permission requires approval`,
                         };
                     }
-                    return { ok: false, error: 'PERMISSION_DENIED', message: evaluation.reason ?? 'Permission denied' };
+                    return { ok: false, error: `PERMISSION_DENIED`, message: evaluation.reason ?? `Permission denied` };
                 }
             }
 
             return await mod.execute(ctx);
-        } catch (err: any) {
-            return { ok: false, error: err?.message || 'UNKNOWN_ERROR' };
+        } catch(err: any) {
+            return { ok: false, error: err?.message || `UNKNOWN_ERROR` };
         }
     }
 
     /** List all registered command metas. */
     public List(): CommandModuleMeta[] {
-        return Array.from(this._commands.values()).map(e => e.module.meta);
+        return Array.from(this._commands.values()).map(e => {
+            return e.module.meta;
+        });
     }
 
     /** Get stats about command registry activity. */

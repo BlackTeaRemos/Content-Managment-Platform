@@ -6,7 +6,7 @@ import { neo4jClient } from '../../../Setup/Neo4j.js';
  * @returns true if removed
  */
 export async function removeDescription(uid: string): Promise<boolean> {
-    const session = await neo4jClient.GetSession('WRITE');
+    const session = await neo4jClient.GetSession(`WRITE`);
     try {
         const query = `MATCH (d:Description { uid: $uid }) DETACH DELETE d`;
         const result = await session.run(query, { uid });

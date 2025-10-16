@@ -25,9 +25,9 @@ export async function resolveGameCreatePermissions(
 ): Promise<GameCreatePermissionResult> {
     return resolveCommandPermission({
         interaction,
-        templates: ['object:game:create:{serverId}', 'object:game:create'],
+        templates: [`object:game:create:{serverId}`, `object:game:create`],
         context: { serverId: context.serverId },
-        logSource: 'GameCreateFlow',
+        logSource: `GameCreateFlow`,
         action: `object:game:create:${context.serverId}`,
     });
 }

@@ -6,7 +6,7 @@ import { neo4jClient } from '../../../Setup/Neo4j.js';
  */
 export interface Description {
     uid: string;
-    refType: 'organization' | 'game' | 'user';
+    refType: `organization` | `game` | `user`;
     refUid: string;
     text: string;
 }
@@ -20,23 +20,23 @@ export interface Description {
  * @returns The created description properties
  */
 export async function createDescription(
-    refType: 'organization' | 'game' | 'user',
+    refType: `organization` | `game` | `user`,
     refUid: string,
     text: string,
     uid?: string,
 ): Promise<Description> {
-    const session = await neo4jClient.GetSession('WRITE');
+    const session = await neo4jClient.GetSession(`WRITE`);
     try {
-        const descUid = uid || `desc_${randomUUID().replace(/-/g, '')}`;
-        let matchClause = '';
+        const descUid = uid || `desc_${randomUUID().replace(/-/g, ``)}`;
+        let matchClause = ``;
         switch (refType) {
-            case 'organization':
+            case `organization`:
                 matchClause = `MATCH (o:Organization { uid: $refUid })`;
                 break;
-            case 'game':
+            case `game`:
                 matchClause = `MATCH (g:Game { uid: $refUid })`;
                 break;
-            case 'user':
+            case `user`:
                 matchClause = `MATCH (u:User { uid: $refUid })`;
                 break;
         }
@@ -44,13 +44,13 @@ export async function createDescription(
             ${matchClause}
             MERGE (d:Description { uid: $descUid })
             SET d.refType = $refType, d.refUid = $refUid, d.text = $text
-            ${refType === 'organization' ? 'MERGE (o)-[:HAS_DESCRIPTION]->(d)' : ''}
-            ${refType === 'game' ? 'MERGE (g)-[:HAS_DESCRIPTION]->(d)' : ''}
-            ${refType === 'user' ? 'MERGE (u)-[:HAS_DESCRIPTION]->(d)' : ''}
+            ${refType === `organization` ? `MERGE (o)-[:HAS_DESCRIPTION]->(d)` : ``}
+            ${refType === `game` ? `MERGE (g)-[:HAS_DESCRIPTION]->(d)` : ``}
+            ${refType === `user` ? `MERGE (u)-[:HAS_DESCRIPTION]->(d)` : ``}
             RETURN d`;
         const params = { descUid, refType, refUid, text };
         const result = await session.run(query, params);
-        const node = result.records[0].get('d');
+        const node = result.records[0].get(`d`);
         const props = node.properties;
         return {
             uid: props.uid,

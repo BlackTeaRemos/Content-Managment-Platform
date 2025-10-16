@@ -60,7 +60,7 @@ export interface Neo4jRelationshipMapping {
     /** Relationship type */
     type: string;
     /** Direction of the relationship */
-    direction: 'OUTGOING' | 'INCOMING' | 'BOTH';
+    direction: `OUTGOING` | `INCOMING` | `BOTH`;
     /** Target node labels */
     targetLabels: string[];
     /** Property name in domain object that holds the relationship */
@@ -78,7 +78,7 @@ export interface Neo4jIndexDefinition {
     /** Properties to index */
     properties: string[];
     /** Index type */
-    type?: 'BTREE' | 'FULLTEXT' | 'VECTOR';
+    type?: `BTREE` | `FULLTEXT` | `VECTOR`;
     /** Whether this is a unique index */
     unique?: boolean;
 }
@@ -90,7 +90,7 @@ export interface Neo4jConstraintDefinition {
     /** Constraint name */
     name: string;
     /** Constraint type */
-    type: 'UNIQUENESS' | 'EXISTENCE' | 'NODE_KEY';
+    type: `UNIQUENESS` | `EXISTENCE` | `NODE_KEY`;
     /** Properties involved in the constraint */
     properties: string[];
     /** Labels this constraint applies to */

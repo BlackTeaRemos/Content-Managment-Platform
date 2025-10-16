@@ -15,14 +15,14 @@ import { flowManager } from '../Common/Flow/Manager.js';
 export async function onMessageCreate(message: Message): Promise<void> {
     // Passive-aggressive commentary for empty messages
     if (!message.content && message.attachments.size === 0 && message.embeds.length === 0) {
-        log.info('...Wow, an empty message. Inspiring.', 'Message');
+        log.info(`...Wow, an empty message. Inspiring.`, `Message`);
     } else {
-        log.info(`Message from ${message.author.tag}: ${message.content}`, 'Message');
+        log.info(`Message from ${message.author.tag}: ${message.content}`, `Message`);
     }
     // Delegate to flow manager for any active user flows expecting message input
     try {
         await flowManager.onMessage(message);
-    } catch (error) {
-        log.error(`Flow manager failed to process message ${message.id}: ${(error as Error).message}`, 'Flow');
+    } catch(error) {
+        log.error(`Flow manager failed to process message ${message.id}: ${(error as Error).message}`, `Flow`);
     }
 }

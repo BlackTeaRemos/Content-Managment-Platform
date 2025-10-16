@@ -13,7 +13,9 @@ export function collectEnsureTokens(
         const resolved = resolveTokens(template, context);
         for (const token of resolved) {
             const key = formatPermissionToken(token);
-            if (seen.has(key)) continue;
+            if (seen.has(key)) {
+                continue;
+            }
             seen.add(key);
             tokens.push(token);
         }

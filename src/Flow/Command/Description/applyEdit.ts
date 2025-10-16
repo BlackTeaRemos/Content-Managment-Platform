@@ -5,14 +5,16 @@
  * @param input string Input to apply
  * @returns string Resulting text
  */
-export function applyEdit(current: string, mode: 'append' | 'remove' | 'replace', input: string): string {
+export function applyEdit(current: string, mode: `append` | `remove` | `replace`, input: string): string {
     switch (mode) {
-        case 'append':
-            return current + (input ? `\n${input}` : '');
-        case 'remove':
-            if (!input) return current;
-            return current.split(input).join('');
-        case 'replace':
+        case `append`:
+            return current + (input ? `\n${input}` : ``);
+        case `remove`:
+            if (!input) {
+                return current;
+            }
+            return current.split(input).join(``);
+        case `replace`:
         default:
             return input;
     }

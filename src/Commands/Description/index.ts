@@ -4,20 +4,22 @@ import { startInteractiveDescriptionEditor } from '../../SubCommand/Editor/Descr
 import type { TokenSegmentInput } from '../../Common/permission/index.js';
 
 export const data = new SlashCommandBuilder()
-    .setName('description')
-    .setDescription('Work with descriptions')
-    .addSubcommand(s => s.setName('create').setDescription('Create or edit description for an object'));
+    .setName(`description`)
+    .setDescription(`Work with descriptions`)
+    .addSubcommand(s => {
+        return s.setName(`create`).setDescription(`Create or edit description for an object`);
+    });
 
-export const permissionTokens: TokenSegmentInput[][] = [['description']];
+export const permissionTokens: TokenSegmentInput[][] = [[`description`]];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     const sub = interaction.options.getSubcommand();
-    if (sub !== 'create') {
-        await interaction.reply({ content: 'Unsupported subcommand', flags: MessageFlags.Ephemeral });
+    if (sub !== `create`) {
+        await interaction.reply({ content: `Unsupported subcommand`, flags: MessageFlags.Ephemeral });
         return;
     }
 
-    await executeWithContext(interaction, async (fm, executionContext) => {
+    await executeWithContext(interaction, async(fm, executionContext) => {
         // Delegate interaction handling to the Editor subcommand which owns the UI flow.
         await startInteractiveDescriptionEditor(fm, interaction, executionContext);
     });

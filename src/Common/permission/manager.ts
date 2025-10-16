@@ -13,26 +13,26 @@ import type { PermissionCheckResult, PermissionState, PermissionTokenInput, Perm
  * const result = computeStateResult('allowed', 'command:create');
  */
 function computeStateResult(state: PermissionState, formattedToken: string): PermissionCheckResult {
-    if (state === 'allowed') {
+    if (state === `allowed`) {
         return { allowed: true };
     }
-    if (state === 'once') {
+    if (state === `once`) {
         return {
             allowed: false,
             requiresApproval: true,
             missing: [formattedToken],
-            reason: 'Requires one-time approval',
+            reason: `Requires one-time approval`,
         };
     }
-    if (state === 'forbidden') {
+    if (state === `forbidden`) {
         return {
             allowed: false,
             requiresApproval: false,
             missing: [formattedToken],
-            reason: 'Explicitly forbidden',
+            reason: `Explicitly forbidden`,
         };
     }
-    return { allowed: false, requiresApproval: true, missing: [formattedToken], reason: 'Token(s) not defined' };
+    return { allowed: false, requiresApproval: true, missing: [formattedToken], reason: `Token(s) not defined` };
 }
 
 /**
@@ -65,7 +65,7 @@ export async function checkPermission(
         }
 
         if (!permissions || Object.keys(permissions).length === 0) {
-            return { allowed: false, requiresApproval: true, reason: 'No explicit permissions configured' };
+            return { allowed: false, requiresApproval: true, reason: `No explicit permissions configured` };
         }
 
         const emitter = buildPermissionEmitter(permissions);
@@ -73,10 +73,12 @@ export async function checkPermission(
 
         for (const tokenInput of tokens) {
             const token = normalizeToken(tokenInput);
-            if (!token.length) continue;
+            if (!token.length) {
+                continue;
+            }
             const formatted = formatPermissionToken(token);
             const state = evaluateToken(emitter, token);
-            if (!state || state === 'undefined') {
+            if (!state || state === `undefined`) {
                 missing.push(formatted);
                 continue;
             }
@@ -84,7 +86,7 @@ export async function checkPermission(
             if (result.allowed) {
                 return result;
             }
-            if (state === 'once' || state === 'forbidden') {
+            if (state === `once` || state === `forbidden`) {
                 return result;
             }
         }
@@ -93,9 +95,9 @@ export async function checkPermission(
             allowed: false,
             requiresApproval: true,
             missing: missing.length ? missing : undefined,
-            reason: missing.length ? 'Token(s) not defined' : undefined,
+            reason: missing.length ? `Token(s) not defined` : undefined,
         };
-    } catch (err: any) {
+    } catch(err: any) {
         return { allowed: false, reason: `Permission check error: ${String(err)}` };
     }
 }

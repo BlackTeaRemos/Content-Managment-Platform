@@ -27,14 +27,18 @@ export async function requestPermissionFromAdmin(
     timeoutMs = 5 * 60 * 1000,
 ): Promise<PermissionDecision> {
     const guild = interaction.guild;
-    if (!guild) return 'no_admin';
+    if (!guild) {
+        return `no_admin`;
+    }
 
     // Fetch all members and find administrators (exclude bots)
     const members = await guild.members.fetch();
-    const admins = members.filter(m => !m.user.bot && m.permissions.has(PermissionsBitField.Flags.Administrator));
+    const admins = members.filter(m => {
+        return !m.user.bot && m.permissions.has(PermissionsBitField.Flags.Administrator);
+    });
 
     if (!admins || admins.size === 0) {
-        return 'no_admin';
+        return `no_admin`;
     }
 
     // Pick a random admin
@@ -42,22 +46,22 @@ export async function requestPermissionFromAdmin(
     const admin = adminArray[Math.floor(Math.random() * adminArray.length)];
 
     // Build message
-    const tokensStr = options.tokens.map(formatPermissionToken).join(', ');
+    const tokensStr = options.tokens.map(formatPermissionToken).join(`, `);
     const embed = new EmbedBuilder()
-        .setTitle('Permission request')
+        .setTitle(`Permission request`)
         .setColor(Colors.Orange)
         .setDescription(`User <@${interaction.user.id}> requested to run command(s): ${tokensStr}`)
-        .addFields([{ name: 'Reason', value: options.reason || 'No reason provided' }]);
+        .addFields([{ name: `Reason`, value: options.reason || `No reason provided` }]);
 
     const approveOnceBtn = new ButtonBuilder()
-        .setCustomId('perm_approve_once')
-        .setLabel('Approve once')
+        .setCustomId(`perm_approve_once`)
+        .setLabel(`Approve once`)
         .setStyle(ButtonStyle.Primary);
     const approveForeverBtn = new ButtonBuilder()
-        .setCustomId('perm_approve_forever')
-        .setLabel('Approve forever')
+        .setCustomId(`perm_approve_forever`)
+        .setLabel(`Approve forever`)
         .setStyle(ButtonStyle.Success);
-    const denyBtn = new ButtonBuilder().setCustomId('perm_deny').setLabel('Deny').setStyle(ButtonStyle.Danger);
+    const denyBtn = new ButtonBuilder().setCustomId(`perm_deny`).setLabel(`Deny`).setStyle(ButtonStyle.Danger);
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(approveOnceBtn, approveForeverBtn, denyBtn);
 
@@ -66,7 +70,7 @@ export async function requestPermissionFromAdmin(
     try {
         // Try channel first (some channel types may not expose send in typings)
         msg = await (interaction.channel as any).send({ content: `${admin}`, embeds: [embed], components: [row] });
-    } catch (err) {
+    } catch(err) {
         try {
             // Fallback to DM the selected admin
             msg = await admin.send({
@@ -74,33 +78,35 @@ export async function requestPermissionFromAdmin(
                 embeds: [embed],
                 components: [row],
             });
-        } catch (err2) {
-            return 'no_admin';
+        } catch(err2) {
+            return `no_admin`;
         }
     }
 
     // Wait for button from the selected admin
     try {
-        const filter = (i: any) => i.user.id === admin.id && i.message.id === msg.id;
+        const filter = (i: any) => {
+            return i.user.id === admin.id && i.message.id === msg.id;
+        };
         const collected = await msg.awaitMessageComponent({ filter, time: timeoutMs });
 
         await collected.deferUpdate();
 
         const id = collected.customId;
-        if (id === 'perm_approve_once') {
-            return 'approve_once';
+        if (id === `perm_approve_once`) {
+            return `approve_once`;
         }
-        if (id === 'perm_approve_forever') {
+        if (id === `perm_approve_forever`) {
             // Persist in-memory grant for now
-            grantForever(guild.id, interaction.user.id, options.tokens[0] ?? 'unknown');
-            return 'approve_forever';
+            grantForever(guild.id, interaction.user.id, options.tokens[0] ?? `unknown`);
+            return `approve_forever`;
         }
-        return 'deny';
-    } catch (err) {
+        return `deny`;
+    } catch(err) {
         // Timeout or other error
         try {
             await msg.edit({ content: `${admin} (no response)`, components: [] });
         } catch {}
-        return 'timeout';
+        return `timeout`;
     }
 }

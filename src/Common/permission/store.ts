@@ -13,13 +13,21 @@ const grantedForever: Map<string, Map<string, Set<string>>> = new Map(); // guil
  * grantForever('guild', 'user', 'command:create');
  */
 export function grantForever(guildId: string, userId: string, token: PermissionTokenInput): void {
-    if (!guildId || !userId) return;
+    if (!guildId || !userId) {
+        return;
+    }
     const normalized = normalizeToken(token);
-    if (!normalized.length) return;
+    if (!normalized.length) {
+        return;
+    }
     const serialized = tokenKey(normalized);
-    if (!grantedForever.has(guildId)) grantedForever.set(guildId, new Map());
+    if (!grantedForever.has(guildId)) {
+        grantedForever.set(guildId, new Map());
+    }
     const guildMap = grantedForever.get(guildId)!;
-    if (!guildMap.has(userId)) guildMap.set(userId, new Set());
+    if (!guildMap.has(userId)) {
+        guildMap.set(userId, new Set());
+    }
     guildMap.get(userId)!.add(serialized);
 }
 
@@ -37,16 +45,26 @@ export function hasPermanentGrant(
     userId: string | undefined,
     tokens: PermissionTokenInput[],
 ): boolean {
-    if (!guildId || !userId) return false;
+    if (!guildId || !userId) {
+        return false;
+    }
     const guildMap = grantedForever.get(guildId);
-    if (!guildMap) return false;
+    if (!guildMap) {
+        return false;
+    }
     const userTokens = guildMap.get(userId);
-    if (!userTokens) return false;
+    if (!userTokens) {
+        return false;
+    }
     for (const token of tokens) {
         const normalized = normalizeToken(token);
-        if (!normalized.length) continue;
+        if (!normalized.length) {
+            continue;
+        }
         const serialized = tokenKey(normalized);
-        if (userTokens.has(serialized)) return true;
+        if (userTokens.has(serialized)) {
+            return true;
+        }
     }
     return false;
 }

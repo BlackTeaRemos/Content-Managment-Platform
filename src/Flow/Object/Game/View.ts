@@ -7,7 +7,7 @@ import { Game } from './Create.js';
  * @returns Game properties or null if not found
  */
 export async function getGame(uid: string): Promise<Game | null> {
-    const session = await neo4jClient.GetSession('READ');
+    const session = await neo4jClient.GetSession(`READ`);
     try {
         const query = `
             MATCH (g:Game { uid: $uid })
@@ -15,15 +15,17 @@ export async function getGame(uid: string): Promise<Game | null> {
             RETURN g, s.id AS srvId`;
         const result = await session.run(query, { uid });
         const record = result.records[0];
-        if (!record) return null;
-        const node = record.get('g');
+        if (!record) {
+            return null;
+        }
+        const node = record.get(`g`);
         const props = node.properties;
-        const srvId = record.get('srvId') as string | null;
+        const srvId = record.get(`srvId`) as string | null;
         return {
             uid: props.uid,
             name: props.name,
             image: props.image,
-            serverId: srvId || '',
+            serverId: srvId || ``,
         };
     } finally {
         await session.close();

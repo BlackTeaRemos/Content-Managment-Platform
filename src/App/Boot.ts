@@ -26,25 +26,31 @@ export async function bootDiscordClient(options: {
     });
 
     // Wire lightweight handlers provided by the caller
-    if (onInteractionCreate) client.on('interactionCreate', onInteractionCreate);
-    if (onMessageCreate) client.on('messageCreate', onMessageCreate);
+    if (onInteractionCreate) {
+        client.on(`interactionCreate`, onInteractionCreate);
+    }
+    if (onMessageCreate) {
+        client.on(`messageCreate`, onMessageCreate);
+    }
 
     // Error logging
-    client.on('error', err => {
+    client.on(`error`, err => {
         try {
-            log.error(`Client error: ${err}`, 'Boot');
+            log.error(`Client error: ${err}`, `Boot`);
         } catch {
             // swallow
         }
-        eventBus.emit('output', `Discord client error: ${String(err)}`);
+        eventBus.emit(`output`, `Discord client error: ${String(err)}`);
     });
 
     // Command registration happens once the client is ready
     let didReady = false;
-    const handleReady = async () => {
-        if (didReady) return;
+    const handleReady = async() => {
+        if (didReady) {
+            return;
+        }
         didReady = true;
-        eventBus.emit('output', '[Boot] Client ready, registering commands...');
+        eventBus.emit(`output`, `[Boot] Client ready, registering commands...`);
 
         await commandsReady;
 
@@ -53,31 +59,33 @@ export async function bootDiscordClient(options: {
             await client.application!.commands.set([]);
 
             // Prepare command bodies
-            const commandData = Object.values(loadedCommands).map((cmd: any) => cmd.data.toJSON());
+            const commandData = Object.values(loadedCommands).map((cmd: any) => {
+                return cmd.data.toJSON();
+            });
 
             if (config.discordGuildId) {
                 try {
                     const registeredGuild = await client.application!.commands.set(commandData, config.discordGuildId);
                     eventBus.emit(
-                        'output',
+                        `output`,
                         `Registered ${registeredGuild.size ?? commandData.length} guild commands to guild ${config.discordGuildId}.`,
                     );
-                } catch (err) {
-                    eventBus.emit('output', `Guild command registration failed: ${String(err)}`);
+                } catch(err) {
+                    eventBus.emit(`output`, `Guild command registration failed: ${String(err)}`);
                 }
             } else {
                 try {
                     const registeredGlobal = await client.application!.commands.set(commandData);
                     eventBus.emit(
-                        'output',
+                        `output`,
                         `Registered ${registeredGlobal.size ?? commandData.length} global commands.`,
                     );
-                } catch (err) {
-                    eventBus.emit('output', `Global command registration failed: ${String(err)}`);
+                } catch(err) {
+                    eventBus.emit(`output`, `Global command registration failed: ${String(err)}`);
                 }
             }
-        } catch (err) {
-            eventBus.emit('output', `Command registration failed in ready handler: ${String(err)}`);
+        } catch(err) {
+            eventBus.emit(`output`, `Command registration failed in ready handler: ${String(err)}`);
         }
     };
 
@@ -85,11 +93,11 @@ export async function bootDiscordClient(options: {
 
     await client.login(config.discordToken);
 
-    eventBus.emit('output', `Discord.js client logged in.`);
+    eventBus.emit(`output`, `Discord.js client logged in.`);
 
     // Extracted interaction handler for clarity
     const interactionHandler = createInteractionHandler({ loadedCommands });
-    client.on('interactionCreate', interactionHandler);
+    client.on(`interactionCreate`, interactionHandler);
 
     // ensure we return the client and config as before
     return { client, config };

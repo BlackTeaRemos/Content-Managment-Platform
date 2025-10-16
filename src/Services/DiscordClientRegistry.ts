@@ -16,8 +16,8 @@ export function RegisterDiscordClient(client: Client): void {
     // public API – simple enough no JSDoc extras
     if (_client && _client !== client) {
         log.warning(
-            'RegisterDiscordClient called multiple times – overwriting previous client reference',
-            'DiscordClientRegistry',
+            `RegisterDiscordClient called multiple times – overwriting previous client reference`,
+            `DiscordClientRegistry`,
         );
     }
     _client = client;

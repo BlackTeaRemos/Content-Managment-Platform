@@ -12,7 +12,7 @@ export function buildPermissionEmitter(
 ): ComplexEventEmitter<PermissionEvaluationPayload> {
     const emitter = new ComplexEventEmitter<PermissionEvaluationPayload>();
     for (const [rawToken, state] of Object.entries(permissions)) {
-        if (!state || state === 'undefined') {
+        if (!state || state === `undefined`) {
             continue;
         }
         const token = normalizeToken(rawToken);
@@ -20,7 +20,9 @@ export function buildPermissionEmitter(
             continue;
         }
         const specificity = token.length;
-        emitter.on(token, payload => payload.consider(state, specificity));
+        emitter.on(token, payload => {
+            return payload.consider(state, specificity);
+        });
     }
     return emitter;
 }
