@@ -12,6 +12,7 @@ import { createUser } from '../../../Flow/Object/User/Create.js';
 import { flowManager } from '../../../Common/Flow/Manager.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 import type { ExecutionContext } from '../../../Domain/index.js';
+import type { TokenSegmentInput } from '../../../Common/permission/index.js';
 
 interface FlowState {
     discordId: string;
@@ -27,6 +28,8 @@ type StepContext = {
 export const data = new SlashCommandSubcommandBuilder()
     .setName('create')
     .setDescription('Interactive register a new user');
+
+export const permissionTokens: TokenSegmentInput[][] = [['object', 'user', 'create']];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     await executeWithContext(interaction, async (flowManager, executionContext) => {

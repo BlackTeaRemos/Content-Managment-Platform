@@ -7,12 +7,12 @@ import {
     EmbedBuilder,
     Colors,
 } from 'discord.js';
-import { grantForever } from './PermissionManager.js';
-
-/**
- * Decision result from admin interaction
- */
-export type PermissionDecision = 'approve_once' | 'approve_forever' | 'deny' | 'no_admin' | 'timeout';
+import {
+    formatPermissionToken,
+    grantForever,
+    type PermissionDecision,
+    type PermissionToken,
+} from '../../Common/permission/index.js';
 
 /**
  * Send an approval request to a random administrator in the guild and wait for their response.
@@ -23,7 +23,7 @@ export type PermissionDecision = 'approve_once' | 'approve_forever' | 'deny' | '
  */
 export async function requestPermissionFromAdmin(
     interaction: ChatInputCommandInteraction,
-    options: { tokens: string[]; reason?: string },
+    options: { tokens: PermissionToken[]; reason?: string },
     timeoutMs = 5 * 60 * 1000,
 ): Promise<PermissionDecision> {
     const guild = interaction.guild;
@@ -42,7 +42,7 @@ export async function requestPermissionFromAdmin(
     const admin = adminArray[Math.floor(Math.random() * adminArray.length)];
 
     // Build message
-    const tokensStr = options.tokens.join(', ');
+    const tokensStr = options.tokens.map(formatPermissionToken).join(', ');
     const embed = new EmbedBuilder()
         .setTitle('Permission request')
         .setColor(Colors.Orange)

@@ -4,16 +4,20 @@ import {
     ChatInputCommandInteraction,
     StringSelectMenuBuilder,
     MessageFlags,
+    EmbedBuilder,
 } from 'discord.js';
 import { flowManager } from '../Common/Flow/Manager.js';
 import { executeWithContext } from '../Common/ExecutionContextHelpers.js';
-import { getSupportedTypes, listRecordsFor, buildEmbedFor } from '../Common/Flow/ObjectRegistry.js';
+import { getSupportedTypes } from '../Common/Flow/ObjectRegistry.js';
 import { neo4jClient } from '../Setup/Neo4j.js';
 import { log } from '../Common/Log.js';
+import { getGame } from '../Flow/Object/Game/View.js';
+import { resolveViewPermissions } from '../Flow/Command/ViewFlow.js';
+import { requestPermissionFromAdmin } from '../SubCommand/Permission/PermissionUI.js';
+import { grantForever } from '../Common/permission/index.js';
 
 export const data = new SlashCommandBuilder().setName('view').setDescription('Interactive view of stored objects');
-
-export const permissionTokens = 'view';
+export const permissionTokens = 'command:view';
 
 interface State {
     type?: string;
@@ -162,6 +166,37 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             .prompt(async (ctx: any) => {
                 const type = ctx.state.type!;
                 const id = ctx.state.id!;
+                const baseInteraction = ctx.interaction as ChatInputCommandInteraction;
+
+                const permission = await resolveViewPermissions(baseInteraction, { type, id });
+                if (!permission.allowed) {
+                    if (permission.requiresApproval) {
+                        try {
+                            await baseInteraction.deferReply({ ephemeral: true });
+                        } catch {}
+                        const decision = await requestPermissionFromAdmin(baseInteraction, {
+                            tokens: permission.tokens,
+                            reason: permission.reason,
+                        });
+                        if (decision === 'approve_forever' && baseInteraction.guildId) {
+                            grantForever(baseInteraction.guildId, baseInteraction.user.id, permission.tokens[0] ?? []);
+                        }
+                        if (decision !== 'approve_forever' && decision !== 'approve_once') {
+                            await baseInteraction.followUp({
+                                content: 'Permission denied or no admin response.',
+                                flags: MessageFlags.Ephemeral,
+                            });
+                            return;
+                        }
+                        // otherwise continue to show details
+                    } else {
+                        await baseInteraction.followUp({
+                            content: permission.reason ?? 'You are not allowed to view this item.',
+                            flags: MessageFlags.Ephemeral,
+                        });
+                        return;
+                    }
+                }
 
                 let embed = new EmbedBuilder().setTitle('Details').setColor('Blue');
                 if (type === 'game') {
@@ -174,7 +209,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                     embed.setDescription(`Viewing for type ${type} not implemented.`);
                 }
                 try {
-                    await (ctx.interaction as ChatInputCommandInteraction).followUp({
+                    await baseInteraction.followUp({
                         embeds: [embed],
                         flags: MessageFlags.Ephemeral,
                     });

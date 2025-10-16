@@ -13,6 +13,7 @@ import { createOrganization, generateUid } from '../../../Flow/Object/Organizati
 import { flowManager } from '../../../Common/Flow/Manager.js';
 import { executeWithContext } from '../../../Common/ExecutionContextHelpers.js';
 import type { ExecutionContext } from '../../../Domain/index.js';
+import type { TokenSegmentInput } from '../../../Common/permission/index.js';
 
 interface FlowState {
     name: string;
@@ -31,6 +32,8 @@ interface FlowState {
 export const data = new SlashCommandSubcommandBuilder()
     .setName('create')
     .setDescription('Interactive create a new organization');
+
+export const permissionTokens: TokenSegmentInput[][] = [['object', 'organization', 'create']];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     await executeWithContext(interaction, async (flowManager, executionContext) => {

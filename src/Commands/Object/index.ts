@@ -8,6 +8,7 @@ import { readdirSync, lstatSync } from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { log } from '../../Common/Log.js';
+import type { TokenSegmentInput } from '../../Common/permission/index.js';
 
 // Removed createRequire; using dynamic import for ESM modules
 const __filename = fileURLToPath(import.meta.url);
@@ -68,16 +69,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 }
 
-export const permissionTokens = async (interaction: ChatInputCommandInteraction) => {
-    const group = interaction.options.getSubcommandGroup(false) ?? '';
-    const sub = interaction.options.getSubcommand(true) ?? '';
-    const tokens: string[] = [];
+export const permissionTokens = async (interaction: ChatInputCommandInteraction): Promise<TokenSegmentInput[][]> => {
+    const groupRaw = interaction.options.getSubcommandGroup(false) ?? '';
+    const subRaw = interaction.options.getSubcommand(true) ?? '';
+    const group = groupRaw.toLowerCase();
+    const sub = subRaw.toLowerCase();
+    const tokens: TokenSegmentInput[][] = [];
     if (group && sub) {
-        tokens.push(`object:${group}:${sub}`);
+        tokens.push(['object', group, sub]);
     }
     if (group) {
-        tokens.push(`object:${group}`);
+        tokens.push(['object', group]);
     }
-    tokens.push('object');
+    tokens.push(['object']);
     return tokens;
 };
