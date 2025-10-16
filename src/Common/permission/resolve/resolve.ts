@@ -1,35 +1,14 @@
 import { log } from '../../Log.js';
 import { checkPermission } from '../manager.js';
-import { formatPermissionToken } from '../tokens.js';
-import { resolveTokens } from './resolveTokens.js';
 import type { PermissionToken, PermissionTokenInput } from '../types.js';
-import type { ResolveEnsureOptions, ResolveEnsureResult, ResolveApprovalPayload } from './types.js';
-
-function collectEnsureTokens(
-    templates: Array<string | import('../types.js').TokenSegmentInput[]> = [],
-    context: import('./types.js').TokenResolveContext,
-): PermissionToken[] {
-    const tokens: PermissionToken[] = [];
-    const seen = new Set<string>();
-    for (const template of templates) {
-        const resolved = resolveTokens(template, context);
-        for (const token of resolved) {
-            const key = formatPermissionToken(token);
-            if (seen.has(key)) continue;
-            seen.add(key);
-            tokens.push(token);
-        }
-    }
-    return tokens;
-}
-
-function toInputs(tokens: PermissionToken[]): PermissionTokenInput[] {
-    return tokens.map(token => [...token]);
-}
+import type { ResolveEnsureOptions, ResolveEnsureResult } from './types.js';
+import { collectEnsureTokens } from './collectEnsureTokens.js';
+import { toInputs } from './toInputs.js';
 
 /**
- * Approval-aware permission evaluation. Returns a structured result indicating
- * whether the requested templates are allowed, and any admin decision if required.
+ * Public resolve function. Delegates to internal doEnsure implementation.
+ * The function is explicitly named `resolve` to preserve a consistent symbol
+ * name across the codebase.
  */
 export async function resolve(
     templates: Array<string | import('../types.js').TokenSegmentInput[]>,
@@ -43,12 +22,12 @@ export async function resolve(
             return { success: true, detail: { tokens } };
         }
 
-        let member = options.member;
+        let member: import('discord.js').GuildMember | null | undefined = options.member;
         if (member === undefined && options.getMember) {
             member = await options.getMember();
         }
 
-        const inputs = toInputs(tokens);
+        const inputs: PermissionTokenInput[] = toInputs(tokens);
         const evaluation = await checkPermission(options.permissions, member ?? null, inputs);
 
         if (evaluation.allowed) {
@@ -66,7 +45,7 @@ export async function resolve(
             };
         }
 
-        const decision = await options.requestApproval({ tokens, reason: evaluation.reason } as ResolveApprovalPayload);
+        const decision = await options.requestApproval({ tokens, reason: evaluation.reason } as any);
 
         if (decision === 'approve_once' || decision === 'approve_forever') {
             return { success: true, detail: { tokens, decision } };
@@ -81,7 +60,7 @@ export async function resolve(
             },
         };
     } catch (error) {
-        log.error(`ensure failed: ${String(error)}`, 'Permission.ensure');
+        log.error(`doEnsure failed: ${String(error)}`, 'Permission.doEnsure');
         return {
             success: false,
             detail: {

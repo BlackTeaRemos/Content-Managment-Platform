@@ -1,3 +1,7 @@
+export * from './normalizeToken.js';
+export * from './normalizeSegment.js';
+export * from './tokenKey.js';
+export * from './formatPermissionToken.js';
 import type { PermissionToken, PermissionTokenInput, TokenSegmentInput } from './types.js';
 import type { EventIdentifierSubset } from '../ComplexEventEmitter.js';
 

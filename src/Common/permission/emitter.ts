@@ -1,3 +1,5 @@
+export * from './buildPermissionEmitter.js';
+export * from './evaluateToken.js';
 import ComplexEventEmitter from '../ComplexEventEmitter.js';
 import type { PermissionEvaluationPayload, PermissionState, PermissionToken, PermissionsObject } from './types.js';
 import { normalizeToken } from './tokens.js';

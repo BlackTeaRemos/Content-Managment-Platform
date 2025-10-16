@@ -50,9 +50,12 @@ export async function checkPermission(
     tokens: PermissionTokenInput[],
 ): Promise<PermissionCheckResult> {
     try {
-        if (member && member.permissions?.has && member.permissions.has('Administrator')) {
-            return { allowed: true };
-        }
+        // TEMPORARY: disable instant admin approval so approval flows and audit
+        // paths can be exercised during testing. Restore this early-return when
+        // admin bypass behaviour is desired again.
+        // if (member && member.permissions?.has && member.permissions.has('Administrator')) {
+        //     return { allowed: true };
+        // }
 
         const guildId = member?.guild.id;
         const userId = member?.id;
