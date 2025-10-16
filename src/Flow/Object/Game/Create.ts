@@ -17,7 +17,7 @@ export interface Game {
  * @returns generated UID string
  */
 export function generateGameUid(prefix: string): string {
-    return `${prefix}_${randomUUID().replace(/-/g, '')}`;
+    return `${prefix}_${randomUUID().replace(/-/g, ``)}`;
 }
 
 /**
@@ -29,7 +29,7 @@ export function generateGameUid(prefix: string): string {
  * @returns The created game properties
  */
 export async function createGame(name: string, image: string, serverId: string, uid?: string): Promise<Game> {
-    const session = await neo4jClient.GetSession('WRITE');
+    const session = await neo4jClient.GetSession(`WRITE`);
     try {
         // check existing
         const checkQuery = `
@@ -37,9 +37,9 @@ export async function createGame(name: string, image: string, serverId: string, 
             RETURN g LIMIT 1`;
         const checkResult = await session.run(checkQuery, { name, serverId });
         if (checkResult.records.length > 0) {
-            throw new Error('Game with this name already exists in the server');
+            throw new Error(`Game with this name already exists in the server`);
         }
-        const gameUid = uid || generateGameUid('game');
+        const gameUid = uid || generateGameUid(`game`);
         const query = `
             MERGE (s:Server { id: $serverId })
             MERGE (g:Game { uid: $uid })
@@ -49,13 +49,13 @@ export async function createGame(name: string, image: string, serverId: string, 
         const params = { uid: gameUid, name, image, serverId };
         const result = await session.run(query, params);
         const record = result.records[0];
-        const node = record.get('g');
+        const node = record.get(`g`);
         const props = node.properties;
         return {
             uid: props.uid,
             name: props.name,
             image: props.image,
-            serverId: record.get('srvId'),
+            serverId: record.get(`srvId`),
         };
     } finally {
         await session.close();

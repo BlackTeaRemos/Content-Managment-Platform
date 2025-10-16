@@ -24,7 +24,7 @@ export class StepBuilder<State> {
      * @param fn FlowStep<State>['prompt'] Asynchronous prompt callback executed when the step activates. Example async ctx => {...}.
      * @returns this Allows fluent chaining to configure additional handlers. Example step.prompt(handler).
      */
-    public prompt(fn: FlowStep<State>['prompt']): this {
+    public prompt(fn: FlowStep<State>[`prompt`]): this {
         this.step.prompt = fn;
         return this;
     }
@@ -36,7 +36,7 @@ export class StepBuilder<State> {
      */
     public onInteraction(
         fn: (
-            ctx: Parameters<NonNullable<FlowStep<State>['handleInteraction']>>[0],
+            ctx: Parameters<NonNullable<FlowStep<State>[`handleInteraction`]>>[0],
             interaction: Interaction,
         ) => Promise<boolean>,
     ): this {
@@ -50,7 +50,7 @@ export class StepBuilder<State> {
      * @returns this Enables fluent chaining. Example step.onMessage(handler).
      */
     public onMessage(
-        fn: (ctx: Parameters<NonNullable<FlowStep<State>['handleMessage']>>[0], message: Message) => Promise<boolean>,
+        fn: (ctx: Parameters<NonNullable<FlowStep<State>[`handleMessage`]>>[0], message: Message) => Promise<boolean>,
     ): this {
         this.step.handleMessage = fn;
         return this;

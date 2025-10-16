@@ -69,7 +69,7 @@ async function __SearchFiles(
                 }
             }
         }
-    } catch (error) {
+    } catch(error) {
         log.error(`Error processing directory ${currentPath}:`, error as any, import.meta.filename);
         throw new Error(`Directory access error: Failed to read directory at ${currentPath}`);
     }
@@ -104,7 +104,7 @@ async function __ExecuteFile(filePath: string): Promise<any> {
         }
 
         return dynamicModule;
-    } catch (error) {
+    } catch(error) {
         log.error(`Failed to execute file at ${filePath}:`, (error as Error).message, import.meta.filename);
         return null;
     }
@@ -133,7 +133,7 @@ export async function ExecuteFilesByPattern(
         if (!dirStat.isDirectory()) {
             throw new Error(`Path ${dirPath} is not a directory`);
         }
-    } catch (error) {
+    } catch(error) {
         if ((error as NodeJS.ErrnoException).code === `ENOENT`) {
             throw new Error(`Directory not found: ${dirPath}`);
         }

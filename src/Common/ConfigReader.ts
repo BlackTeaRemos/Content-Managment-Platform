@@ -24,20 +24,20 @@ import { readFile } from 'fs/promises';
  */
 export async function readConfigFile(configPath: string): Promise<any> {
     try {
-        const raw = await readFile(configPath, 'utf-8');
+        const raw = await readFile(configPath, `utf-8`);
         let config: any; // Parsed config object
 
-        if (configPath.endsWith('.json')) {
+        if (configPath.endsWith(`.json`)) {
             config = JSON.parse(raw);
-        } else if (configPath.endsWith('.yaml') || configPath.endsWith('.yml')) {
+        } else if (configPath.endsWith(`.yaml`) || configPath.endsWith(`.yml`)) {
             // Lazy-load yaml parser only if needed
-            const yaml = await import('js-yaml');
+            const yaml = await import(`js-yaml`);
             config = yaml.load(raw);
         } else {
-            throw new Error('Unsupported config file format. Use .json or .yaml');
+            throw new Error(`Unsupported config file format. Use .json or .yaml`);
         }
         return config;
-    } catch (err) {
+    } catch(err) {
         throw err;
     }
 }

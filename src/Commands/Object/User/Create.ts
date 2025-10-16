@@ -26,35 +26,35 @@ type StepContext = {
 };
 
 export const data = new SlashCommandSubcommandBuilder()
-    .setName('create')
-    .setDescription('Interactive register a new user');
+    .setName(`create`)
+    .setDescription(`Interactive register a new user`);
 
-export const permissionTokens: TokenSegmentInput[][] = [['object', 'user', 'create']];
+export const permissionTokens: TokenSegmentInput[][] = [[`object`, `user`, `create`]];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    await executeWithContext(interaction, async (flowManager, executionContext) => {
+    await executeWithContext(interaction, async(flowManager, executionContext) => {
         // Start interactive flow: ask for Discord ID via modal, then create user
         await flowManager
-            .builder(interaction.user.id, interaction as any, { discordId: '' }, executionContext)
-            .step('user_id_modal')
-            .prompt(async (ctx: StepContext) => {
+            .builder(interaction.user.id, interaction as any, { discordId: `` }, executionContext)
+            .step(`user_id_modal`)
+            .prompt(async(ctx: StepContext) => {
                 const modal = new ModalBuilder()
-                    .setCustomId('user_id_modal')
-                    .setTitle('Register User')
+                    .setCustomId(`user_id_modal`)
+                    .setTitle(`Register User`)
                     .addComponents(
                         new ActionRowBuilder<TextInputBuilder>().addComponents(
                             new TextInputBuilder()
-                                .setCustomId('discordId')
-                                .setLabel('Discord User ID')
+                                .setCustomId(`discordId`)
+                                .setLabel(`Discord User ID`)
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(true),
                         ),
                     );
                 await (ctx.interaction as ChatInputCommandInteraction).showModal(modal);
             })
-            .onInteraction(async (ctx: StepContext, interaction: any) => {
+            .onInteraction(async(ctx: StepContext, interaction: any) => {
                 if (interaction.isModalSubmit()) {
-                    const id = interaction.fields.getTextInputValue('discordId').trim();
+                    const id = interaction.fields.getTextInputValue(`discordId`).trim();
                     ctx.state.discordId = id;
                     await interaction.deferUpdate();
                     return true;
@@ -63,7 +63,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             })
             .next()
             .step()
-            .prompt(async (ctx: StepContext) => {
+            .prompt(async(ctx: StepContext) => {
                 const user = await createUser(ctx.state.discordId!);
                 await (ctx.interaction as ChatInputCommandInteraction).followUp({
                     content: `User ${user.uid} (${user.discord_id}) created.`,

@@ -35,21 +35,23 @@ export function createCommandContext(
     const executionContext = createExecutionContext(correlationId);
 
     return {
-        guildId: interaction.guildId || '',
+        guildId: interaction.guildId || ``,
         userId: interaction.user.id,
         channelId: interaction.channelId,
-        options: Object.fromEntries(interaction.options.data.map(option => [option.name, option.value])),
+        options: Object.fromEntries(interaction.options.data.map(option => {
+            return [option.name, option.value];
+        })),
         reply: async message => {
             // Use reply for initial response, followUp for subsequent or deferred
             const isInitial = !interaction.replied && !interaction.deferred;
             if (isInitial) {
-                if (typeof message === 'string') {
+                if (typeof message === `string`) {
                     return await interaction.reply({ content: message });
                 }
                 return await interaction.reply(message);
             } else {
                 // Fallback to followUp for later responses
-                if (typeof message === 'string') {
+                if (typeof message === `string`) {
                     return await interaction.followUp({ content: message });
                 }
                 return await interaction.followUp(message);

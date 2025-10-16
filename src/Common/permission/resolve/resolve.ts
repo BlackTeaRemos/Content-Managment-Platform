@@ -39,7 +39,7 @@ export async function resolve(
                 success: false,
                 detail: {
                     tokens,
-                    reason: evaluation.reason ?? 'Permission denied',
+                    reason: evaluation.reason ?? `Permission denied`,
                     requiresApproval: !!evaluation.requiresApproval,
                 },
             };
@@ -47,7 +47,7 @@ export async function resolve(
 
         const decision = await options.requestApproval({ tokens, reason: evaluation.reason } as any);
 
-        if (decision === 'approve_once' || decision === 'approve_forever') {
+        if (decision === `approve_once` || decision === `approve_forever`) {
             return { success: true, detail: { tokens, decision } };
         }
 
@@ -56,11 +56,11 @@ export async function resolve(
             detail: {
                 tokens,
                 decision,
-                reason: evaluation.reason ?? 'Permission denied',
+                reason: evaluation.reason ?? `Permission denied`,
             },
         };
-    } catch (error) {
-        log.error(`doEnsure failed: ${String(error)}`, 'Permission.doEnsure');
+    } catch(error) {
+        log.error(`doEnsure failed: ${String(error)}`, `Permission.doEnsure`);
         return {
             success: false,
             detail: {

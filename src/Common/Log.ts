@@ -14,11 +14,11 @@ export function GetTimestamp(): string {
  * Log levels for application logging.
  */
 export enum LogLevel {
-    Critical = 'CRITICAL',
-    Error = 'ERROR',
-    Warning = 'WARNING',
-    Info = 'INFO',
-    Debug = 'DEBUG',
+    Critical = `CRITICAL`,
+    Error = `ERROR`,
+    Warning = `WARNING`,
+    Info = `INFO`,
+    Debug = `DEBUG`,
 }
 
 /**
@@ -118,7 +118,7 @@ export namespace log {
      * const loc = log.Helper_LocationBuilder(__dirname, 'MyClass', 'myMethod');
      */
     export function Helper_LocationBuilder(dirname: string, className: string, funcName?: string): string {
-        return `${dirname}/${className}${funcName ? `/${funcName}` : ''}`;
+        return `${dirname}/${className}${funcName ? `/${funcName}` : ``}`;
     }
 }
 

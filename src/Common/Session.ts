@@ -18,7 +18,7 @@ export class Session<T> {
      */
     constructor(schema: import('joi').ObjectSchema<T>, rawConfig: unknown) {
         // Treat null or non-object rawConfig as empty object for validation
-        const safeConfig = rawConfig != null && typeof rawConfig === 'object' ? rawConfig : {};
+        const safeConfig = rawConfig != null && typeof rawConfig === `object` ? rawConfig : {};
         this._configurator = new Configurator<T>(schema, safeConfig);
         this.events = new EventEmitter();
     }

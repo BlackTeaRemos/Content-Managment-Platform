@@ -24,7 +24,7 @@ export interface OrganizationWithMembers {
  * @returns Organization with members or null if not found
  */
 export async function getOrganizationWithMembers(uid: string): Promise<OrganizationWithMembers | null> {
-    const session = await neo4jClient.GetSession('READ');
+    const session = await neo4jClient.GetSession(`READ`);
     try {
         const query = `
             MATCH (o:Organization { uid: $uid })
@@ -35,21 +35,25 @@ export async function getOrganizationWithMembers(uid: string): Promise<Organizat
         if (!rec) {
             return null;
         }
-        const orgNode = rec.get('o').properties;
-        const users = rec.get('users').map((n: any) => n.properties);
+        const orgNode = rec.get(`o`).properties;
+        const users = rec.get(`users`).map((n: any) => {
+            return n.properties;
+        });
         return {
             organization: {
                 uid: orgNode.uid,
                 name: orgNode.name,
                 friendly_name: orgNode.friendly_name,
             },
-            users: users.map((u: any) => ({
-                uid: u.uid,
-                discord_id: u.discord_id,
-                name: u.name,
-                friendly_name: u.friendly_name,
-                id: u.id,
-            })),
+            users: users.map((u: any) => {
+                return {
+                    uid: u.uid,
+                    discord_id: u.discord_id,
+                    name: u.name,
+                    friendly_name: u.friendly_name,
+                    id: u.id,
+                };
+            }),
         };
     } finally {
         await session.close();

@@ -233,7 +233,7 @@ export default class ComplexEventEmitter<EventData> {
 
         for (const [key, child] of node.children.entries()) {
             const value =
-        key === `*` ? undefined : isNaN(Number(key)) ? key : Number(key);
+                key === `*` ? undefined : isNaN(Number(key)) ? key : Number(key);
             result.push(...this.collectEventIdentifiers(child, [...prefix, value]));
         }
 

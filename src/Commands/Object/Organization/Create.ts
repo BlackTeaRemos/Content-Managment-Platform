@@ -30,52 +30,52 @@ interface FlowState {
 }
 
 export const data = new SlashCommandSubcommandBuilder()
-    .setName('create')
-    .setDescription('Interactive create a new organization');
+    .setName(`create`)
+    .setDescription(`Interactive create a new organization`);
 
-export const permissionTokens: TokenSegmentInput[][] = [['object', 'organization', 'create']];
+export const permissionTokens: TokenSegmentInput[][] = [[`object`, `organization`, `create`]];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    await executeWithContext(interaction, async (flowManager, executionContext) => {
+    await executeWithContext(interaction, async(flowManager, executionContext) => {
         // Interactive flow: collect name, friendly name (optional), and UID (optional)
         await flowManager
-            .builder(interaction.user.id, interaction as any, { name: '', friendly: '', uid: '' }, executionContext)
-            .step('org_create_modal')
-            .prompt(async (ctx: StepContext) => {
+            .builder(interaction.user.id, interaction as any, { name: ``, friendly: ``, uid: `` }, executionContext)
+            .step(`org_create_modal`)
+            .prompt(async(ctx: StepContext) => {
                 const modal = new ModalBuilder()
-                    .setCustomId('org_create_modal')
-                    .setTitle('New Organization')
+                    .setCustomId(`org_create_modal`)
+                    .setTitle(`New Organization`)
                     .addComponents(
                         new ActionRowBuilder<TextInputBuilder>().addComponents(
                             new TextInputBuilder()
-                                .setCustomId('name')
-                                .setLabel('Organization Name')
+                                .setCustomId(`name`)
+                                .setLabel(`Organization Name`)
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(true),
                         ),
                         new ActionRowBuilder<TextInputBuilder>().addComponents(
                             new TextInputBuilder()
-                                .setCustomId('friendly')
-                                .setLabel('Friendly Name')
+                                .setCustomId(`friendly`)
+                                .setLabel(`Friendly Name`)
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(false),
                         ),
                         new ActionRowBuilder<TextInputBuilder>().addComponents(
                             new TextInputBuilder()
-                                .setCustomId('uid')
-                                .setLabel('Custom UID')
+                                .setCustomId(`uid`)
+                                .setLabel(`Custom UID`)
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(false),
                         ),
                     );
                 await (ctx.interaction as ChatInputCommandInteraction).showModal(modal);
             })
-            .onInteraction(async (ctx: StepContext, interaction: any) => {
+            .onInteraction(async(ctx: StepContext, interaction: any) => {
                 if (interaction.isModalSubmit()) {
                     const fields = interaction.fields;
-                    ctx.state.name = fields.getTextInputValue('name').trim();
-                    ctx.state.friendly = fields.getTextInputValue('friendly').trim() || ctx.state.name;
-                    ctx.state.uid = fields.getTextInputValue('uid').trim() || undefined;
+                    ctx.state.name = fields.getTextInputValue(`name`).trim();
+                    ctx.state.friendly = fields.getTextInputValue(`friendly`).trim() || ctx.state.name;
+                    ctx.state.uid = fields.getTextInputValue(`uid`).trim() || undefined;
                     await interaction.deferUpdate();
                     return true;
                 }
@@ -83,7 +83,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             })
             .next()
             .step()
-            .prompt(async (ctx: StepContext) => {
+            .prompt(async(ctx: StepContext) => {
                 try {
                     const org = await createOrganization(
                         ctx.state.name!,
@@ -94,14 +94,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                         content: `Organization ${org.uid} '${org.name}' created.`,
                         flags: MessageFlags.Ephemeral,
                     });
-                } catch (error) {
+                } catch(error) {
                     log.error(
-                        'Error creating organization',
+                        `Error creating organization`,
                         error instanceof Error ? error.message : String(error),
-                        'createOrganization',
+                        `createOrganization`,
                     );
                     await (ctx.interaction as ChatInputCommandInteraction).followUp({
-                        content: 'Error creating organization',
+                        content: `Error creating organization`,
                         flags: MessageFlags.Ephemeral,
                     });
                 }

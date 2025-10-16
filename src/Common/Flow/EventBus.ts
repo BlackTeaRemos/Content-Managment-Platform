@@ -18,11 +18,11 @@ import {
  * Provides a typed structure describing the event being logged by {@link FlowEventBus.registerLoggingDelegates}.
  */
 export type FlowLoggingEvent<State> =
-    | { kind: 'prompt'; payload: FlowPromptPayload<State> }
-    | { kind: 'interaction'; payload: FlowInteractionPayload<State> }
-    | { kind: 'message'; payload: FlowMessagePayload<State> }
-    | { kind: 'advance'; payload: FlowAdvancePayload<State> }
-    | { kind: 'cancel'; payload: FlowCancelPayload<State> };
+    | { kind: `prompt`; payload: FlowPromptPayload<State> }
+    | { kind: `interaction`; payload: FlowInteractionPayload<State> }
+    | { kind: `message`; payload: FlowMessagePayload<State> }
+    | { kind: `advance`; payload: FlowAdvancePayload<State> }
+    | { kind: `cancel`; payload: FlowCancelPayload<State> };
 
 /**
  * Options controlling how flow logging delegates behave.
@@ -37,22 +37,22 @@ export interface FlowLoggingOptions<State> {
     formatter?: (event: FlowLoggingEvent<State>) => string;
 }
 
-const DEFAULT_LOG_SOURCE = 'FlowEventBus';
+const DEFAULT_LOG_SOURCE = `FlowEventBus`;
 
 function defaultFlowLogFormatter<State>(event: FlowLoggingEvent<State>): string {
     switch (event.kind) {
-        case 'prompt':
+        case `prompt`:
             return `Prompt step ${event.payload.stepIndex} for ${event.payload.userId}`;
-        case 'interaction':
+        case `interaction`:
             return `Interaction on step ${event.payload.stepIndex} for ${event.payload.userId}`;
-        case 'message':
+        case `message`:
             return `Message on step ${event.payload.stepIndex} for ${event.payload.userId}`;
-        case 'advance':
+        case `advance`:
             return `Advance from step ${event.payload.fromStepIndex} for ${event.payload.userId}`;
-        case 'cancel':
+        case `cancel`:
             return `Cancel flow for ${event.payload.userId}`;
         default:
-            return 'Unknown flow event';
+            return `Unknown flow event`;
     }
 }
 
@@ -75,7 +75,9 @@ export class FlowEventBus<State> extends ComplexEventEmitter<any> {
      * These listeners can be overridden by additional listeners registered by the app.
      */
     public registerDefaultDelegates() {
-        if (this.defaultDelegatesRegistered) return;
+        if (this.defaultDelegatesRegistered) {
+            return;
+        }
         this.defaultDelegatesRegistered = true;
         // Prompt: call step.prompt(ctx)
         this.on(anyStepPromptId, (payload: FlowPromptPayload<State>) => {
@@ -86,20 +88,28 @@ export class FlowEventBus<State> extends ComplexEventEmitter<any> {
         // Interaction: if step.customId matches, call step.handleInteraction(ctx, interaction) and optionally advance
         this.on(anyStepInteractionId, (payload: FlowInteractionPayload<State>) => {
             const { step, ctx, interaction } = payload;
-            if (!step.handleInteraction) return;
-            void (async () => {
+            if (!step.handleInteraction) {
+                return;
+            }
+            void (async() => {
                 const ok = await step.handleInteraction!(ctx, interaction);
-                if (ok) await ctx.advance();
+                if (ok) {
+                    await ctx.advance();
+                }
             })();
         });
 
         // Message: call step.handleMessage(ctx, message) and optionally advance
         this.on(anyStepMessageId, (payload: FlowMessagePayload<State>) => {
             const { step, ctx, message } = payload;
-            if (!step.handleMessage) return;
-            void (async () => {
+            if (!step.handleMessage) {
+                return;
+            }
+            void (async() => {
                 const ok = await step.handleMessage!(ctx, message);
-                if (ok) await ctx.advance();
+                if (ok) {
+                    await ctx.advance();
+                }
             })();
         });
         // Advance/Cancel events are emitted for observability; default listeners are no-ops here.
@@ -115,23 +125,36 @@ export class FlowEventBus<State> extends ComplexEventEmitter<any> {
      * });
      */
     public registerLoggingDelegates(options: FlowLoggingOptions<State> = {}): void {
-        if (this.loggingRegistered) return;
+        if (this.loggingRegistered) {
+            return;
+        }
         const level = options.level ?? LogLevel.Debug;
         const source = options.source ?? DEFAULT_LOG_SOURCE;
         const formatter = options.formatter ?? defaultFlowLogFormatter;
         const emitLog = (event: FlowLoggingEvent<State>) => {
             const message = formatter(event);
-            if (!message) return;
+            if (!message) {
+                return;
+            }
             log(level, message, source);
         };
 
-        this.on(anyStepPromptId, (payload: FlowPromptPayload<State>) => emitLog({ kind: 'prompt', payload }));
-        this.on(anyStepInteractionId, (payload: FlowInteractionPayload<State>) =>
-            emitLog({ kind: 'interaction', payload }),
+        this.on(anyStepPromptId, (payload: FlowPromptPayload<State>) => {
+            return emitLog({ kind: `prompt`, payload });
+        });
+        this.on(anyStepInteractionId, (payload: FlowInteractionPayload<State>) => {
+            return emitLog({ kind: `interaction`, payload });
+        },
         );
-        this.on(anyStepMessageId, (payload: FlowMessagePayload<State>) => emitLog({ kind: 'message', payload }));
-        this.on(anyAdvanceId, (payload: FlowAdvancePayload<State>) => emitLog({ kind: 'advance', payload }));
-        this.on(anyCancelId, (payload: FlowCancelPayload<State>) => emitLog({ kind: 'cancel', payload }));
+        this.on(anyStepMessageId, (payload: FlowMessagePayload<State>) => {
+            return emitLog({ kind: `message`, payload });
+        });
+        this.on(anyAdvanceId, (payload: FlowAdvancePayload<State>) => {
+            return emitLog({ kind: `advance`, payload });
+        });
+        this.on(anyCancelId, (payload: FlowCancelPayload<State>) => {
+            return emitLog({ kind: `cancel`, payload });
+        });
 
         this.loggingRegistered = true;
     }

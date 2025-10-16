@@ -27,24 +27,24 @@ export class PathManager {
 
     /** Root for persistent data (objects, transactions). */
     public DataRoot(): string {
-        return this.__ensure(this._cfg.dataRoot || resolve('./data'));
+        return this.__ensure(this._cfg.dataRoot || resolve(`./data`));
     }
     /** Root for local mirror content. */
     public MirrorRoot(): string {
-        return this.__ensure(this._cfg.mirrorRoot || this.DataRoot() + '/mirror');
+        return this.__ensure(this._cfg.mirrorRoot || this.DataRoot() + `/mirror`);
     }
     /** Root for ephemeral temp content. */
     public TempRoot(): string {
-        return this.__ensure(this._cfg.tempRoot || this.DataRoot() + '/tmp');
+        return this.__ensure(this._cfg.tempRoot || this.DataRoot() + `/tmp`);
     }
 
     /** Directory holding objects for a guild. */
     public GuildObjectsDir(guildId: string): string {
-        return this.__ensure(join(this.DataRoot(), guildId, 'objects'));
+        return this.__ensure(join(this.DataRoot(), guildId, `objects`));
     }
     /** Directory holding transactions for a guild/object. */
     public ObjectTxDir(guildId: string, objectId: string): string {
-        return this.__ensure(join(this.DataRoot(), guildId, 'objects', objectId, 'tx'));
+        return this.__ensure(join(this.DataRoot(), guildId, `objects`, objectId, `tx`));
     }
 }
 

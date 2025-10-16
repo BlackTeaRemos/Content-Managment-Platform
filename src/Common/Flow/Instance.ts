@@ -58,8 +58,10 @@ export class FlowInstance<State> {
      */
     public async handleInteraction(interaction: Interaction) {
         const step = this.steps[this.current];
-        if (!step) return;
-        if (step.customId && 'customId' in interaction && (interaction as any).customId === step.customId) {
+        if (!step) {
+            return;
+        }
+        if (step.customId && `customId` in interaction && (interaction as any).customId === step.customId) {
             const snapshot = step.tag ? this.ensureSnapshot(step, this.current) : undefined;
             const ctx = this.buildContext(step, this.current, interaction);
             if (snapshot) {
@@ -82,7 +84,9 @@ export class FlowInstance<State> {
      */
     public async handleMessage(message: Message) {
         const step = this.steps[this.current];
-        if (!step) return;
+        if (!step) {
+            return;
+        }
         if (step.handleMessage) {
             const snapshot = step.tag ? this.ensureSnapshot(step, this.current) : undefined;
             const ctx = this.buildContext(step, this.current);
@@ -140,18 +144,24 @@ export class FlowInstance<State> {
         const guardIndex = step ? stepIndex : this.current;
         const getStep = (tag: string): StepSnapshot<State> | undefined => {
             const entry = this.historyByTag.get(tag);
-            if (!entry) return undefined;
-            if (entry.stepIndex >= guardIndex) return undefined;
+            if (!entry) {
+                return undefined;
+            }
+            if (entry.stepIndex >= guardIndex) {
+                return undefined;
+            }
             return entry;
         };
         const recall = <T = unknown>(tag: string, key: string): T | undefined => {
             const entry = getStep(tag);
-            if (!entry) return undefined;
+            if (!entry) {
+                return undefined;
+            }
             return entry.data[key] as T | undefined;
         };
         const remember = (key: string, value: unknown): void => {
             if (!step || !step.tag) {
-                throw new Error('Cannot store data for an untagged step. Provide a tag when defining this step.');
+                throw new Error(`Cannot store data for an untagged step. Provide a tag when defining this step.`);
             }
             const snapshot = this.ensureSnapshot(step, stepIndex);
             snapshot.data[key] = value;
@@ -172,7 +182,7 @@ export class FlowInstance<State> {
 
     private ensureSnapshot(step: FlowStep<State>, stepIndex: number): StepSnapshot<State> {
         if (!step.tag) {
-            throw new Error('Cannot capture snapshot for step without a tag.');
+            throw new Error(`Cannot capture snapshot for step without a tag.`);
         }
         let snapshot = this.historyByTag.get(step.tag);
         if (!snapshot) {

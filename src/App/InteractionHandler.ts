@@ -17,9 +17,13 @@ export function createInteractionHandler(options: { loadedCommands: Record<strin
     const { loadedCommands } = options;
 
     return async function handleInteraction(interaction: any) {
-        if (!interaction?.isChatInputCommand?.()) return;
+        if (!interaction?.isChatInputCommand?.()) {
+            return;
+        }
         const command = loadedCommands[interaction.commandName];
-        if (!command) return;
+        if (!command) {
+            return;
+        }
 
         try {
             const member = interaction.guild ? await interaction.guild.members.fetch(interaction.user.id) : null;
@@ -33,7 +37,7 @@ export function createInteractionHandler(options: { loadedCommands: Record<strin
                 | undefined = cmdAny.permissionTokens ?? cmdAny.permissions ?? `command:{commandName}`;
 
             const templates: (string | TokenSegmentInput[])[] = [];
-            if (typeof rawTemplates === 'function') {
+            if (typeof rawTemplates === `function`) {
                 try {
                     const t = await rawTemplates(interaction);
                     rawTemplates = t || `command:{commandName}`;
@@ -41,21 +45,26 @@ export function createInteractionHandler(options: { loadedCommands: Record<strin
                     rawTemplates = `command:{commandName}`;
                 }
             }
-            if (typeof rawTemplates === 'string') {
+            if (typeof rawTemplates === `string`) {
                 templates.push(rawTemplates);
             } else if (Array.isArray(rawTemplates)) {
-                for (const entry of rawTemplates) templates.push(entry as string | TokenSegmentInput[]);
+                for (const entry of rawTemplates) {
+                    templates.push(entry as string | TokenSegmentInput[]);
+                }
             }
 
             // Hydrated resolve context so admin approval UI can be shown as needed.
             const resolverCtx = {
                 commandName: interaction.commandName,
                 interaction,
-                options: Object.fromEntries(interaction.options.data.map((o: any) => [o.name, o.value])),
+                options: Object.fromEntries(interaction.options.data.map((o: any) => {
+                    return [o.name, o.value];
+                })),
                 userId: interaction.user.id,
                 guildId: interaction.guildId ?? undefined,
-                getMember: async () =>
-                    interaction.guild ? await interaction.guild.members.fetch(interaction.user.id) : null,
+                getMember: async() => {
+                    return interaction.guild ? await interaction.guild.members.fetch(interaction.user.id) : null;
+                },
             };
 
             // Use throwing resolver: will prompt admins when needed; throws if denied.
@@ -66,14 +75,16 @@ export function createInteractionHandler(options: { loadedCommands: Record<strin
             });
 
             // Persist forever-grant if admin approved permanently
-            if (result.detail.decision === 'approve_forever' && interaction.guildId) {
+            if (result.detail.decision === `approve_forever` && interaction.guildId) {
                 // Grant the most specific token from templates
                 const tokens: PermissionToken[] = [];
                 const seen = new Set<string>();
                 for (const tmpl of templates) {
                     for (const token of resolvePermission(tmpl, resolverCtx)) {
                         const display = formatPermissionToken(token);
-                        if (seen.has(display)) continue;
+                        if (seen.has(display)) {
+                            continue;
+                        }
                         seen.add(display);
                         tokens.push(token);
                     }
@@ -84,22 +95,22 @@ export function createInteractionHandler(options: { loadedCommands: Record<strin
 
             // Execute the command
             await command.execute(interaction);
-        } catch (err: any) {
+        } catch(err: any) {
             // Centralized error handler for permission denials and execution errors
             try {
-                log.error(`Interaction handler error for /${interaction.commandName}: ${String(err)}`, 'Boot');
+                log.error(`Interaction handler error for /${interaction.commandName}: ${String(err)}`, `Boot`);
             } catch {}
             try {
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content:
-                            typeof err?.message === 'string' ? err.message : 'Permission denied or execution error.',
+                            typeof err?.message === `string` ? err.message : `Permission denied or execution error.`,
                         flags: MessageFlags.Ephemeral,
                     });
                 } else if (interaction.deferred) {
                     await interaction.editReply({
                         content:
-                            typeof err?.message === 'string' ? err.message : 'Permission denied or execution error.',
+                            typeof err?.message === `string` ? err.message : `Permission denied or execution error.`,
                     });
                 }
             } catch {}

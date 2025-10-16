@@ -10,7 +10,7 @@ import { MAIN_EVENT_BUS } from '../Events/MainEventBus.js';
 export let neo4jClient: Neo4jClient;
 export async function setupNeo4j() {
     const configService = new ConfigService(MAIN_EVENT_BUS);
-    const configPath = process.env.CONFIG_PATH || './config/config.json';
+    const configPath = process.env.CONFIG_PATH || `./config/config.json`;
     const appConfig = await configService.Load(configPath);
 
     const neo4jConfig: Neo4jConfig = {
@@ -23,5 +23,5 @@ export async function setupNeo4j() {
     neo4jClient = new Neo4jClient(neo4jConfig);
     await neo4jClient.Init();
 
-    console.log('Neo4j client initialized and connected.');
+    console.log(`Neo4j client initialized and connected.`);
 }

@@ -121,8 +121,8 @@ export class DiscordApp {
             }
 
             // Keep original lightweight output after login
-            this.eventBus.emit('output', 'Boot completed.');
-        } catch (err) {
+            this.eventBus.emit(`output`, `Boot completed.`);
+        } catch(err) {
             this.eventBus.emit(`output`, `Fatal boot error: ${err}`);
             throw err;
         }
@@ -172,10 +172,14 @@ export class DiscordApp {
             eventBus: this.eventBus,
             client: this._client,
             config,
-            setCmdChannelId: id => (this._cmdChannelId = id),
+            setCmdChannelId: id => {
+                return (this._cmdChannelId = id);
+            },
         });
 
-        if (discord) this._discordService = discord;
+        if (discord) {
+            this._discordService = discord;
+        }
     }
 
     /**
@@ -217,7 +221,7 @@ export class DiscordApp {
             if (this._logLevel <= LOG_LEVELS.info) {
                 try {
                     log.info(msg, `App`);
-                } catch (err) {
+                } catch(err) {
                     // Fallback to console if log fails
                     console.log(msg);
                 }

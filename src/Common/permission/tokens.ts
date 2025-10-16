@@ -15,17 +15,31 @@ const NUMERIC_SEGMENT = /^(?:-?(?:0|[1-9]\d*))$/;
  * normalizeSegment('123');
  */
 export function normalizeSegment(segment: TokenSegmentInput): EventIdentifierSubset {
-    if (segment === undefined || segment === null) return undefined;
-    if (typeof segment === 'boolean' || typeof segment === 'number') return segment;
+    if (segment === undefined || segment === null) {
+        return undefined;
+    }
+    if (typeof segment === `boolean` || typeof segment === `number`) {
+        return segment;
+    }
     const value = String(segment).trim();
-    if (!value.length) return undefined;
-    if (value === '*') return undefined;
+    if (!value.length) {
+        return undefined;
+    }
+    if (value === `*`) {
+        return undefined;
+    }
     const lower = value.toLowerCase();
-    if (lower === 'true') return true;
-    if (lower === 'false') return false;
+    if (lower === `true`) {
+        return true;
+    }
+    if (lower === `false`) {
+        return false;
+    }
     if (NUMERIC_SEGMENT.test(value)) {
         const num = Number(value);
-        if (Number.isSafeInteger(num)) return num;
+        if (Number.isSafeInteger(num)) {
+            return num;
+        }
     }
     return value;
 }
@@ -39,12 +53,18 @@ export function normalizeSegment(segment: TokenSegmentInput): EventIdentifierSub
  */
 export function normalizeToken(token: PermissionTokenInput): PermissionToken {
     if (Array.isArray(token)) {
-        return token.map(segment => normalizeSegment(segment)) as PermissionToken;
+        return token.map(segment => {
+            return normalizeSegment(segment);
+        }) as PermissionToken;
     }
-    if (typeof token === 'string') {
+    if (typeof token === `string`) {
         const trimmed = token.trim();
-        if (!trimmed) return [];
-        return trimmed.split(':').map(part => normalizeSegment(part)) as PermissionToken;
+        if (!trimmed) {
+            return [];
+        }
+        return trimmed.split(`:`).map(part => {
+            return normalizeSegment(part);
+        }) as PermissionToken;
     }
     return [];
 }
@@ -59,12 +79,18 @@ export function normalizeToken(token: PermissionTokenInput): PermissionToken {
 export function tokenKey(token: PermissionToken): string {
     return token
         .map(part => {
-            if (part === undefined) return 'u:';
-            if (typeof part === 'number') return `n:${part}`;
-            if (typeof part === 'boolean') return `b:${part ? '1' : '0'}`;
+            if (part === undefined) {
+                return `u:`;
+            }
+            if (typeof part === `number`) {
+                return `n:${part}`;
+            }
+            if (typeof part === `boolean`) {
+                return `b:${part ? `1` : `0`}`;
+            }
             return `s:${part}`;
         })
-        .join('|');
+        .join(`|`);
 }
 
 /**
@@ -75,11 +101,15 @@ export function tokenKey(token: PermissionToken): string {
  * formatPermissionToken(['command', 'create']);
  */
 export function formatPermissionToken(token: PermissionToken): string {
-    if (!token.length) return 'EMPTY';
+    if (!token.length) {
+        return `EMPTY`;
+    }
     return token
         .map(part => {
-            if (part === undefined) return '*';
+            if (part === undefined) {
+                return `*`;
+            }
             return String(part);
         })
-        .join(':');
+        .join(`:`);
 }

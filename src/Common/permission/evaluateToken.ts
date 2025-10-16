@@ -8,7 +8,9 @@ export function evaluateToken(
     const evaluation = { specificity: -1, state: undefined as PermissionState | undefined };
     const payload: PermissionEvaluationPayload = {
         consider: (state, specificity) => {
-            if (specificity < evaluation.specificity) return;
+            if (specificity < evaluation.specificity) {
+                return;
+            }
             evaluation.specificity = specificity;
             evaluation.state = state;
         },

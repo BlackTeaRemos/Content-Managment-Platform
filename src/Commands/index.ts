@@ -27,7 +27,7 @@ export interface BotCommandsMap {
 
 const commands: BotCommandsMap = {};
 
-export const commandsReady: Promise<void> = (async () => {
+export const commandsReady: Promise<void> = (async() => {
     let modules: any[];
     try {
         // load all commands in root (no subdirectories)
@@ -45,38 +45,38 @@ export const commandsReady: Promise<void> = (async () => {
             DepthMode.ExactDepth,
         );
         modules = [...rootModules, ...groupModules];
-    } catch (err) {
-        log.error('Error scanning command files', `[commands/index]`);
+    } catch(err) {
+        log.error(`Error scanning command files`, `[commands/index]`);
         return;
     }
     for (const mod of modules) {
         try {
             // default export class
-            if (typeof mod === 'function') {
+            if (typeof mod === `function`) {
                 try {
                     const inst = new (mod as any)();
-                    if (inst.data && typeof inst.execute === 'function') {
+                    if (inst.data && typeof inst.execute === `function`) {
                         commands[inst.data.name] = inst;
                         continue;
                     }
                 } catch {}
             }
-        } catch (err) {
-            log.error('Error loading module', `[commands/index]`);
+        } catch(err) {
+            log.error(`Error loading module`, `[commands/index]`);
             continue;
         }
         const moduleExports = mod as any;
         // named export data+execute
-        if (moduleExports.data && typeof moduleExports.execute === 'function') {
+        if (moduleExports.data && typeof moduleExports.execute === `function`) {
             commands[moduleExports.data.name] = { data: moduleExports.data, execute: moduleExports.execute };
             continue;
         }
         // other named exports as classes
         for (const Ex of Object.values(moduleExports)) {
-            if (typeof Ex === 'function') {
+            if (typeof Ex === `function`) {
                 try {
                     const inst = new (Ex as any)();
-                    if (inst.data && typeof inst.execute === 'function') {
+                    if (inst.data && typeof inst.execute === `function`) {
                         commands[inst.data.name] = inst;
                     }
                 } catch {}

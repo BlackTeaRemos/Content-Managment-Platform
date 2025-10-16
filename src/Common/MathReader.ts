@@ -57,9 +57,17 @@ export class MathReader {
 
 // Example default handlers
 const defaultMathReader = new MathReader();
-defaultMathReader.setHandler('+=', (a, b) => a + b);
-defaultMathReader.setHandler('-=', (a, b) => a - b);
-defaultMathReader.setHandler('*=', (a, b) => a * b);
-defaultMathReader.setHandler('/=', (a, b) => a / b);
+defaultMathReader.setHandler(`+=`, (a, b) => {
+    return a + b;
+});
+defaultMathReader.setHandler(`-=`, (a, b) => {
+    return a - b;
+});
+defaultMathReader.setHandler(`*=`, (a, b) => {
+    return a * b;
+});
+defaultMathReader.setHandler(`/=`, (a, b) => {
+    return a / b;
+});
 
 export { defaultMathReader };

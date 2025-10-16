@@ -97,6 +97,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 The `CommandRegistry.Execute()` method automatically creates an `ExecutionContext` if one is not provided, ensuring all CommandModule-based commands have access to execution context.
 
+The `CommandRegistry.Execute()` method also enforces permission checks before executing a command. It resolves static permission token templates exported by command modules (strings or arrays) and evaluates them using the centralized permission manager. If a permission evaluation requires interactive admin approval, programmatic execution will be denied with a clear error result (interactive approval flows are only available for Discord interactions).
+
+Notes:
+
+- Commands may export `permissionTokens` as a string, array, or async function. When a function is exported it is intended for use with Discord interactions and will not be executed in programmatic contexts. For programmatic calls prefer static templates (string or array) so tokens can be resolved by `CommandRegistry.Execute()`.
+
 ### FlowManager
 
 The `FlowManager` and `FlowBuilder` have been extended to accept and pass execution context through all flow steps:

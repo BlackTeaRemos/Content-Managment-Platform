@@ -12,7 +12,7 @@ import { commands, commandsReady } from '../Commands/index.js';
  * @returns {Promise<void>} - Resolves when setup is complete
  */
 export async function onReady(client: Client): Promise<void> {
-    log.info(`Bot is ready as ${client.user?.tag}`, 'Ready');
+    log.info(`Bot is ready as ${client.user?.tag}`, `Ready`);
 
     // Diagnostic: list registered application commands (global and guild)
     try {
@@ -22,24 +22,28 @@ export async function onReady(client: Client): Promise<void> {
             // Fetch existing global commands
             const global = await application.commands.fetch();
             log.info(
-                `Global commands (${global.size}): ${[...global.values()].map(c => `/${c.name}`).join(', ')}`,
-                'Ready',
+                `Global commands (${global.size}): ${[...global.values()].map(c => {
+                    return `/${c.name}`;
+                }).join(`, `)}`,
+                `Ready`,
             );
             // Ensure command loader has completed, then propagate loaded commands globally
             try {
                 await commandsReady;
-                const data = Object.values(commands).map(cmd => cmd.data.toJSON());
+                const data = Object.values(commands).map(cmd => {
+                    return cmd.data.toJSON();
+                });
                 const registered = await application.commands.set(data);
-                log.info(`Registered ${registered.size} global commands`, 'Ready');
-            } catch (err) {
+                log.info(`Registered ${registered.size} global commands`, `Ready`);
+            } catch(err) {
                 log.error(
                     `Failed to register global commands`,
                     err instanceof Error ? err.message : String(err),
-                    'Ready',
+                    `Ready`,
                 );
             }
         }
-    } catch (err) {
-        log.warning(`Failed to fetch global commands: ${err instanceof Error ? err.message : String(err)}`, 'Ready');
+    } catch(err) {
+        log.warning(`Failed to fetch global commands: ${err instanceof Error ? err.message : String(err)}`, `Ready`);
     }
 }

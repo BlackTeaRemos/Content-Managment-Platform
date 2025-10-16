@@ -12,12 +12,12 @@
 
 /** Well-known application error codes (extend as needed). */
 export const ERROR_CODES = {
-    VALIDATION_ERROR: 'VALIDATION_ERROR',
-    POLICY_ERROR: 'POLICY_ERROR',
-    STORAGE_ERROR: 'STORAGE_ERROR',
-    NOT_FOUND: 'NOT_FOUND',
-    CONFLICT: 'CONFLICT',
-    INTERNAL_ERROR: 'INTERNAL_ERROR',
+    VALIDATION_ERROR: `VALIDATION_ERROR`,
+    POLICY_ERROR: `POLICY_ERROR`,
+    STORAGE_ERROR: `STORAGE_ERROR`,
+    NOT_FOUND: `NOT_FOUND`,
+    CONFLICT: `CONFLICT`,
+    INTERNAL_ERROR: `INTERNAL_ERROR`,
 } as const;
 
 /** Union type of all known error code string literals. */

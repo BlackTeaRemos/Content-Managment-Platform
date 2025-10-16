@@ -3,10 +3,10 @@ import { createCommandContext } from '../../../Common/ExecutionContextHelpers.js
 import type { TokenSegmentInput } from '../../../Common/permission/index.js';
 
 export const data = new SlashCommandSubcommandBuilder()
-    .setName('context-demo')
-    .setDescription('Demonstrates execution context caching to avoid recomputation');
+    .setName(`context-demo`)
+    .setDescription(`Demonstrates execution context caching to avoid recomputation`);
 
-export const permissionTokens: TokenSegmentInput[][] = [['object', 'diagnostic', 'context-demo']];
+export const permissionTokens: TokenSegmentInput[][] = [[`object`, `diagnostic`, `context-demo`]];
 
 /**
  * Example command demonstrating how to use ExecutionContext to avoid unnecessary recomputation.
@@ -16,14 +16,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const ctx = createCommandContext(interaction);
 
     await ctx.reply({
-        content: 'Running expensive operations with execution context...',
+        content: `Running expensive operations with execution context...`,
         flags: MessageFlags.Ephemeral,
     });
 
     // Simulate an expensive database query that we want to avoid repeating
-    const userData = await ctx.executionContext!.getOrCompute(`user:${ctx.userId}`, async () => {
+    const userData = await ctx.executionContext!.getOrCompute(`user:${ctx.userId}`, async() => {
         // Simulate expensive operation
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => {
+            return setTimeout(resolve, 100);
+        });
         return {
             id: ctx.userId,
             username: interaction.user.username,
@@ -33,9 +35,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
 
     // This second call will use cached data instead of recomputing
-    const userData2 = await ctx.executionContext!.getOrCompute<typeof userData>(`user:${ctx.userId}`, async () => {
+    const userData2 = await ctx.executionContext!.getOrCompute<typeof userData>(`user:${ctx.userId}`, async() => {
         // This function won't be called because data is cached
-        throw new Error('This should not be called!');
+        throw new Error(`This should not be called!`);
     });
 
     // Verify both calls returned the same data
@@ -67,7 +69,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 **Cache Statistics:**
 - Cache size: ${stats.size}
-- Cached keys: ${stats.keys.join(', ')}
+- Cached keys: ${stats.keys.join(`, `)}
 - Context created: ${stats.createdAt.toISOString()}
 - Correlation ID: ${stats.correlationId}
 
@@ -76,7 +78,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 - Guild: ${ctx.executionContext!.shared.guildInfo.name} (${ctx.executionContext!.shared.guildInfo.id})
 
 The second userData call used cached data instead of recomputing!
-Cache validation: ${sameData ? 'PASSED - Same data returned' : 'FAILED - Different data'}
+Cache validation: ${sameData ? `PASSED - Same data returned` : `FAILED - Different data`}
         `.trim(),
         flags: MessageFlags.Ephemeral,
     });
