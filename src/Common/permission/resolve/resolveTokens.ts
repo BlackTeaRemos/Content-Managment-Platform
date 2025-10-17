@@ -4,7 +4,17 @@ import type { PermissionToken, TokenSegmentInput } from '../types.js';
 import type { TokenResolveContext } from './types.js';
 
 /**
- * Replace placeholders like `{name}` using values from context.
+ * Substitutes placeholders in a string value using values from the provided context.
+ *
+ * This function replaces patterns like `{name}` with corresponding values from the context object,
+ * handling nested properties, objects, and providing fallbacks for undefined values.
+ *
+ * @param value - The string containing placeholders to substitute.
+ *   Example: 'user:{userId}:edit:{action}'
+ * @param context - The resolution context containing variables for substitution.
+ *   Example: { userId: '123', action: 'profile' }
+ * @returns The string with placeholders replaced by context values.
+ *   Example: 'user:123:edit:profile' (assuming context has userId='123' and action='profile')
  */
 function substitutePlaceholders(value: string, context: TokenResolveContext): string {
     return value.replace(/\{([^}]+)\}/g, (_m, name) => {
@@ -29,7 +39,18 @@ function substitutePlaceholders(value: string, context: TokenResolveContext): st
 }
 
 /**
- * Convert a template (string or array) into ordered tokens from most-specific to least-specific.
+ * Converts a permission template (string or array) into an ordered array of permission tokens, from most-specific to least-specific.
+ *
+ * This function processes the template by substituting placeholders with context values, normalizing segments,
+ * and generating hierarchical tokens to allow for fallback permission checks. It handles both string templates
+ * (split by ':' and ',') and array templates, ensuring unique tokens and logging resolution steps.
+ *
+ * @param template - The permission template to resolve, either a string (e.g., 'user:{id}:edit') or an array of TokenSegmentInput.
+ *   Example: 'admin:view:profile' or [['user', '{userId}', 'edit']]
+ * @param context - The resolution context containing variables for placeholder substitution. Defaults to an empty object.
+ *   Example: { userId: '123', guildId: '456' }
+ * @returns An array of unique PermissionToken objects, ordered from most-specific to least-specific.
+ *   Example: [{ segments: ['admin', 'view', 'profile'], variables: {} }, { segments: ['admin', 'view'], variables: {} }, { segments: ['admin'], variables: {} }]
  */
 export function resolveTokens(
     template: string | TokenSegmentInput[],
@@ -56,8 +77,7 @@ export function resolveTokens(
         if (Array.isArray(tmpl)) {
             const resolvedSegments = tmpl.map(part => {
                 return typeof part === `string` ? substitutePlaceholders(part, context) : part;
-            },
-            );
+            });
             const normalized = normalizeToken(resolvedSegments);
             if (!normalized.length) {
                 continue;
@@ -69,16 +89,11 @@ export function resolveTokens(
                     continue;
                 }
                 seen.add(key);
-                log.info(
-                    `Permission resolve: resolved token [${formatPermissionToken(candidate)}] from array template`,
-                    `Permission.resolve`,
-                );
                 results.push(candidate);
             }
             continue;
         }
 
-        log.info(`Permission resolve: expanding template: "${tmpl}"`, `Permission.resolve`);
         const resolved = substitutePlaceholders(tmpl, context);
         const parts = resolved
             .split(`:`)
@@ -88,6 +103,7 @@ export function resolveTokens(
             .filter(p => {
                 return p !== ``;
             });
+
         const normalized = normalizeToken(parts);
         if (!normalized.length) {
             continue;

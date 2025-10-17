@@ -7,9 +7,20 @@ import { toInputs } from './toInputs.js';
 import type { ResolveEnsureOptions, ResolveEnsureResult, TokenResolveContext } from './types.js';
 
 /**
- * Public resolve function. Delegates to internal doEnsure implementation.
- * The function is explicitly named `resolve` to preserve a consistent symbol
- * name across the codebase.
+ * Resolves permission tokens based on provided templates and options, evaluating access rights and handling approval workflows if necessary.
+ *
+ * This function processes permission templates, collects relevant tokens, checks permissions against a member or context,
+ * and manages approval requests for denied permissions when applicable. It delegates to internal implementations for token collection and evaluation.
+ *
+ * The function is explicitly named `resolve` to preserve a consistent symbol name across the codebase.
+ *
+ * @param templates - An array of permission templates, either as strings or arrays of TokenSegmentInput. Defines the permissions to resolve.
+ *   Example: ['admin.view'], [['user', 'edit', 'profile']]
+ * @param options - Optional configuration object for resolution, including context, member, permissions, and approval handlers.
+ *   Example: { context: { guildId: '123' }, member: someGuildMember, permissions: permissionManager, requestApproval: async (data) => 'approve_once' }
+ * @returns A promise resolving to ResolveEnsureResult, indicating success or failure with details like tokens, reasons, and approval decisions.
+ *   Example success: { success: true, detail: { tokens: [...], requiresApproval: false } }
+ *   Example failure: { success: false, detail: { tokens: [...], reason: 'Permission denied', requiresApproval: true } }
  */
 export async function resolve(
     templates: Array<string | TokenSegmentInput[]>,
@@ -19,18 +30,15 @@ export async function resolve(
         const context = (options.context ?? {}) as TokenResolveContext;
         const tokens = collectEnsureTokens(templates, context);
 
-        log.debug(
-            `resolve invoked templates=${templates.length} tokens=${
-                tokens.length ? tokens.map(token => token.map(segment => segment ?? ``).join(`:`)).join(`, `) : `none`
-            }`,
-            `Permission.resolve`,
-        );
-
         if (tokens.length === 0) {
-            return { success: true, detail: { tokens } };
+            return {
+                success: true,
+                detail: { tokens },
+            };
         }
 
         let member: GuildMember | null | undefined = options.member;
+
         if (member === undefined && options.getMember) {
             member = await options.getMember();
         }
@@ -38,22 +46,10 @@ export async function resolve(
         const inputs: PermissionTokenInput[] = toInputs(tokens);
         const evaluation = await checkPermission(options.permissions, member ?? null, inputs);
 
-        log.debug(
-            `resolve evaluation allowed=${evaluation.allowed} requiresApproval=${
-                evaluation.requiresApproval ?? false
-            } reason=${evaluation.reason ?? `none`}`,
-            `Permission.resolve`,
-        );
-
         if (evaluation.allowed) {
             log.debug(`resolve returning success without approval`, `Permission.resolve`);
             return { success: true, detail: { tokens, requiresApproval: !!evaluation.requiresApproval } };
         }
-
-        log.debug(
-            `resolve approval check: requiresApproval=${evaluation.requiresApproval} skipApproval=${options.skipApproval} hasCallback=${!!options.requestApproval}`,
-            `Permission.resolve`,
-        );
 
         if (!evaluation.requiresApproval || options.skipApproval || !options.requestApproval) {
             log.debug(`resolve returning failure without approval request`, `Permission.resolve`);
@@ -67,17 +63,16 @@ export async function resolve(
             };
         }
 
-        log.debug(`resolve invoking requestApproval callback`, `Permission.resolve`);
         const decision = await options.requestApproval({ tokens, reason: evaluation.reason } as any);
-
-        log.debug(`resolve requestApproval decision=${decision ?? `none`}`, `Permission.resolve`);
 
         if (decision === `approve_once` || decision === `approve_forever`) {
             log.debug(`resolve returning success decision=${decision}`, `Permission.resolve`);
-            return { success: true, detail: { tokens, decision } };
+            return {
+                success: true,
+                detail: { tokens, decision },
+            };
         }
 
-        log.debug(`resolve returning failure post approval`, `Permission.resolve`);
         return {
             success: false,
             detail: {
@@ -88,7 +83,6 @@ export async function resolve(
             },
         };
     } catch (error) {
-        log.error(`doEnsure failed: ${String(error)}`, `Permission.doEnsure`);
         return {
             success: false,
             detail: {

@@ -16,18 +16,22 @@ export function grantForever(guildId: string, userId: string, token: PermissionT
     if (!guildId || !userId) {
         return;
     }
+
     const normalized = normalizeToken(token);
     if (!normalized.length) {
         return;
     }
+
     const serialized = tokenKey(normalized);
     if (!grantedForever.has(guildId)) {
         grantedForever.set(guildId, new Map());
     }
+
     const guildMap = grantedForever.get(guildId)!;
     if (!guildMap.has(userId)) {
         guildMap.set(userId, new Set());
     }
+
     guildMap.get(userId)!.add(serialized);
 }
 
@@ -48,19 +52,23 @@ export function hasPermanentGrant(
     if (!guildId || !userId) {
         return false;
     }
+
     const guildMap = grantedForever.get(guildId);
     if (!guildMap) {
         return false;
     }
+
     const userTokens = guildMap.get(userId);
     if (!userTokens) {
         return false;
     }
+
     for (const token of tokens) {
         const normalized = normalizeToken(token);
         if (!normalized.length) {
             continue;
         }
+
         const serialized = tokenKey(normalized);
         if (userTokens.has(serialized)) {
             return true;

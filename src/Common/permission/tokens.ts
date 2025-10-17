@@ -18,23 +18,29 @@ export function normalizeSegment(segment: TokenSegmentInput): EventIdentifierSub
     if (segment === undefined || segment === null) {
         return undefined;
     }
+
     if (typeof segment === `boolean` || typeof segment === `number`) {
         return segment;
     }
+
     const value = String(segment).trim();
     if (!value.length) {
         return undefined;
     }
+
     if (value === `*`) {
         return undefined;
     }
+
     const lower = value.toLowerCase();
     if (lower === `true`) {
         return true;
     }
+
     if (lower === `false`) {
         return false;
     }
+
     if (NUMERIC_SEGMENT.test(value)) {
         const num = Number(value);
         if (Number.isSafeInteger(num)) {
@@ -62,6 +68,7 @@ export function normalizeToken(token: PermissionTokenInput): PermissionToken {
         if (!trimmed) {
             return [];
         }
+
         return trimmed.split(`:`).map(part => {
             return normalizeSegment(part);
         }) as PermissionToken;
@@ -82,9 +89,11 @@ export function tokenKey(token: PermissionToken): string {
             if (part === undefined) {
                 return `u:`;
             }
+
             if (typeof part === `number`) {
                 return `n:${part}`;
             }
+
             if (typeof part === `boolean`) {
                 return `b:${part ? `1` : `0`}`;
             }
@@ -104,6 +113,7 @@ export function formatPermissionToken(token: PermissionToken): string {
     if (!token.length) {
         return `EMPTY`;
     }
+
     return token
         .map(part => {
             if (part === undefined) {
