@@ -1,6 +1,6 @@
 import type { GuildMember } from 'discord.js';
+import { log } from '../Log.js';
 import { buildPermissionEmitter, evaluateToken } from './emitter.js';
-import { hasPermanentGrant } from './store.js';
 import { formatPermissionToken, normalizeToken } from './tokens.js';
 import type { PermissionCheckResult, PermissionState, PermissionTokenInput, PermissionsObject } from './types.js';
 
@@ -13,9 +13,9 @@ import type { PermissionCheckResult, PermissionState, PermissionTokenInput, Perm
  * const result = computeStateResult('allowed', 'command:create');
  */
 function computeStateResult(state: PermissionState, formattedToken: string): PermissionCheckResult {
-    if (state === `allowed`) {
-        return { allowed: true };
-    }
+    // if (state === `allowed`) {
+    //     return { allowed: true };
+    // }
     if (state === `once`) {
         return {
             allowed: false,
@@ -50,22 +50,33 @@ export async function checkPermission(
     tokens: PermissionTokenInput[],
 ): Promise<PermissionCheckResult> {
     try {
-        // TEMPORARY: disable instant admin approval so approval flows and audit
-        // paths can be exercised during testing. Restore this early-return when
-        // admin bypass behaviour is desired again.
-        // if (member && member.permissions?.has && member.permissions.has('Administrator')) {
-        //     return { allowed: true };
-        // }
-
         const guildId = member?.guild.id;
         const userId = member?.id;
 
-        if (hasPermanentGrant(guildId, userId, tokens)) {
-            return { allowed: true };
-        }
+        const tokenSummaries = tokens
+            .map(tokenInput => {
+                const normalized = normalizeToken(tokenInput);
+                return normalized.length ? formatPermissionToken(normalized) : ``;
+            })
+            .filter(Boolean);
+
+        log.debug(
+            `checkPermission invoked guild=${guildId ?? `unknown`} user=${userId ?? `unknown`} tokens=${
+                tokenSummaries.length ? tokenSummaries.join(`, `) : `none`
+            }`,
+            `Permission.checkPermission`,
+        );
+
+        // Permanent in-memory grants bypass database-backed permission checks, so disable
+        // the shortcut until durable storage exists.
+        // if (hasPermanentGrant(guildId, userId, tokens)) {
+        //     return { allowed: true };
+        // }
 
         if (!permissions || Object.keys(permissions).length === 0) {
-            return { allowed: false, requiresApproval: true, reason: `No explicit permissions configured` };
+            const outcome = { allowed: false, requiresApproval: true, reason: `No explicit permissions configured` };
+            log.debug(`No permissions configured; requiring approval`, `Permission.checkPermission`);
+            return outcome;
         }
 
         const emitter = buildPermissionEmitter(permissions);
@@ -84,20 +95,28 @@ export async function checkPermission(
             }
             const result = computeStateResult(state, formatted);
             if (result.allowed) {
+                log.debug(`Token ${formatted} returned allowed`, `Permission.checkPermission`);
                 return result;
             }
             if (state === `once` || state === `forbidden`) {
+                log.debug(`Token ${formatted} returned state=${state}`, `Permission.checkPermission`);
                 return result;
             }
         }
 
-        return {
+        const fallback = {
             allowed: false,
             requiresApproval: true,
             missing: missing.length ? missing : undefined,
             reason: missing.length ? `Token(s) not defined` : undefined,
         };
-    } catch(err: any) {
+        log.debug(
+            `Defaulting to approval required; missing=${missing.join(`, `) || `none`}`,
+            `Permission.checkPermission`,
+        );
+        return fallback;
+    } catch (err: any) {
+        log.error(`Permission check error: ${String(err)}`, `Permission.checkPermission`);
         return { allowed: false, reason: `Permission check error: ${String(err)}` };
     }
 }

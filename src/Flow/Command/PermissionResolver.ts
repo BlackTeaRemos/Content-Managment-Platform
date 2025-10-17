@@ -8,9 +8,6 @@ import {
     type TokenResolveContext,
 } from '../../Common/permission/index.js';
 import { log } from '../../Common/Log.js';
-// Permission UI is an interactive helper; flows should not import UI directly.
-// Interactive permission requests live under SubCommand so commands can decide when to prompt.
-import { requestPermissionFromAdmin } from '../../SubCommand/Permission/PermissionUI.js';
 
 export interface CommandPermissionResult {
     allowed: boolean;
@@ -37,9 +34,11 @@ export async function resolveCommandPermission(
         commandName: interaction.commandName,
         guildId: interaction.guildId ?? undefined,
         userId: interaction.user.id,
-        options: Object.fromEntries(interaction.options.data.map(o => {
-            return [o.name, o.value];
-        })),
+        options: Object.fromEntries(
+            interaction.options.data.map(o => {
+                return [o.name, o.value];
+            }),
+        ),
         ...context,
     };
 
@@ -91,7 +90,7 @@ async function getMember(
             `resolveCommandPermission`,
         );
         return member;
-    } catch(error) {
+    } catch (error) {
         log.warning(
             `${logSource}: failed to fetch guild member for action=${action} reason=${String(error)}`,
             logSource,

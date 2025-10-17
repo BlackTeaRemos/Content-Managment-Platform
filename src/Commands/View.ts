@@ -12,12 +12,12 @@ import { getSupportedTypes } from '../Common/Flow/ObjectRegistry.js';
 import { neo4jClient } from '../Setup/Neo4j.js';
 import { log } from '../Common/Log.js';
 import { getGame } from '../Flow/Object/Game/View.js';
-import { resolveViewPermissions } from '../Flow/Command/ViewFlow.js';
-import { requestPermissionFromAdmin } from '../SubCommand/Permission/PermissionUI.js';
-import { grantForever } from '../Common/permission/index.js';
+import { resolve } from '../Common/permission/index.js';
+import type { TokenSegmentInput } from '../Common/permission/index.js';
+import { requestPermissionFromAdmin } from '../SubCommand/Permission/requestPermissionFromAdmin.js';
 
 export const data = new SlashCommandBuilder().setName(`view`).setDescription(`Interactive view of stored objects`);
-export const permissionTokens = `command:view`;
+export const permissionTokens: TokenSegmentInput[][] = [[`command`, `view`]];
 
 interface State {
     type?: string;
@@ -47,11 +47,24 @@ function uniqueSelectOptions<T extends { value: string }>(options: T[], max = 25
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    await executeWithContext(interaction, async(flowManager, executionContext) => {
+    const member = interaction.guild
+        ? await interaction.guild.members.fetch(interaction.user.id).catch(() => null)
+        : null;
+    const result = await resolve([[`command`, `view`]], {
+        context: { commandName: `view`, guildId: interaction.guildId ?? undefined, userId: interaction.user.id },
+        member,
+        skipApproval: false,
+        requestApproval: async payload =>
+            requestPermissionFromAdmin(interaction, { tokens: payload.tokens, reason: payload.reason }),
+    });
+    if (!result.success) {
+        throw new Error(result.detail.reason ?? `Permission denied.`);
+    }
+    await executeWithContext(interaction, async (flowManager, executionContext) => {
         await flowManager
             .builder(interaction.user.id, interaction, {} as State, executionContext)
             .step(`select_type`)
-            .prompt(async(ctx: any) => {
+            .prompt(async (ctx: any) => {
                 const options = uniqueSelectOptions(getSupportedTypes());
                 const select = new StringSelectMenuBuilder()
                     .setCustomId(`select_type`)
@@ -62,7 +75,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                     components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select)],
                 });
             })
-            .onInteraction(async(ctx: any, interaction: any) => {
+            .onInteraction(async (ctx: any, interaction: any) => {
                 if (!interaction.isStringSelectMenu()) {
                     return false;
                 }
@@ -72,7 +85,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             })
             .next()
             .step(`select_object`)
-            .prompt(async(ctx: any) => {
+            .prompt(async (ctx: any) => {
                 const type = ctx.state.type!;
 
                 let records: Array<{ uid: string; label: string }> = [];
@@ -112,12 +125,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                     await (ctx.interaction as ChatInputCommandInteraction).editReply({
                         components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select)],
                     });
-                } catch(err) {
+                } catch (err) {
                     log.error(`Failed to editReply for select_object`, String(err), `ViewCommand`);
                     throw err;
                 }
             })
-            .onInteraction(async(ctx: any, interaction: any) => {
+            .onInteraction(async (ctx: any, interaction: any) => {
                 if (!interaction.isStringSelectMenu()) {
                     return false;
                 }
@@ -127,7 +140,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             })
             .next()
             .step(`select_view_org`)
-            .prompt(async(ctx: any) => {
+            .prompt(async (ctx: any) => {
                 // For objects that support descriptions, select organization per rules
                 const describable = [`game`, `organization`, `user`, `building`];
                 if (!describable.includes(ctx.state.type)) {
@@ -173,7 +186,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                     await session.close();
                 }
             })
-            .onInteraction(async(ctx: any, interaction: any) => {
+            .onInteraction(async (ctx: any, interaction: any) => {
                 if (!interaction.isStringSelectMenu()) {
                     return false;
                 }
@@ -183,40 +196,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             })
             .next()
             .step(`show_details`)
-            .prompt(async(ctx: any) => {
+            .prompt(async (ctx: any) => {
                 const type = ctx.state.type!;
                 const id = ctx.state.id!;
                 const baseInteraction = ctx.interaction as ChatInputCommandInteraction;
-
-                const permission = await resolveViewPermissions(baseInteraction, { type, id });
-                if (!permission.allowed) {
-                    if (permission.requiresApproval) {
-                        try {
-                            await baseInteraction.deferReply({ ephemeral: true });
-                        } catch {}
-                        const decision = await requestPermissionFromAdmin(baseInteraction, {
-                            tokens: permission.tokens,
-                            reason: permission.reason,
-                        });
-                        if (decision === `approve_forever` && baseInteraction.guildId) {
-                            grantForever(baseInteraction.guildId, baseInteraction.user.id, permission.tokens[0] ?? []);
-                        }
-                        if (decision !== `approve_forever` && decision !== `approve_once`) {
-                            await baseInteraction.followUp({
-                                content: `Permission denied or no admin response.`,
-                                flags: MessageFlags.Ephemeral,
-                            });
-                            return;
-                        }
-                        // otherwise continue to show details
-                    } else {
-                        await baseInteraction.followUp({
-                            content: permission.reason ?? `You are not allowed to view this item.`,
-                            flags: MessageFlags.Ephemeral,
-                        });
-                        return;
-                    }
-                }
 
                 let embed = new EmbedBuilder().setTitle(`Details`).setColor(`Blue`);
                 if (type === `game`) {
@@ -233,7 +216,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                         embeds: [embed],
                         flags: MessageFlags.Ephemeral,
                     });
-                } catch(err) {
+                } catch (err) {
                     log.error(`Failed to followUp in show_details`, String(err), `ViewCommand`);
                     throw err;
                 }
