@@ -70,8 +70,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                     .setCustomId(`select_type`)
                     .setPlaceholder(`Select object type`)
                     .addOptions(options);
-                await (ctx.interaction as ChatInputCommandInteraction).deferReply({ flags: MessageFlags.Ephemeral });
-                await (ctx.interaction as ChatInputCommandInteraction).editReply({
+                const interaction = ctx.interaction as ChatInputCommandInteraction;
+                if (!interaction.deferred && !interaction.replied) {
+                    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                }
+                await interaction.editReply({
                     components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select)],
                 });
             })

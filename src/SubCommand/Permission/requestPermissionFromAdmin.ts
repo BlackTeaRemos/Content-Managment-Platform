@@ -159,15 +159,16 @@ export async function requestPermissionFromAdmin(
             grantForever(guild.id, interaction.user.id, options.tokens[0] ?? `unknown`);
         }
 
+        // Log the result
+        const action = decision === `deny` ? `forbidden` : `approved`;
+        const scope = decision === `approve_once` ? `once` : decision === `approve_forever` ? `forever` : ``;
+        log.info(`Request by ${interaction.user.tag} was ${action} ${scope} by ${approver.user.tag}`, `PermissionUI`);
+
+        // Delete the approval message
         try {
-            await interaction.editReply({
-                content: `Permission ${decision === `approve_once` ? `approved (once)` : decision === `approve_forever` ? `approved (forever)` : `denied`}.`,
-            });
+            await msg.delete();
         } catch (err) {
-            log.warning(
-                `Permission request: failed editing original interaction reply: ${String(err)}`,
-                `PermissionUI`,
-            );
+            log.warning(`Permission request: failed to delete approval message: ${String(err)}`, `PermissionUI`);
         }
 
         return decision;
@@ -179,14 +180,6 @@ export async function requestPermissionFromAdmin(
             log.info(`Permission request: updated message ${msg.id} to no-response state`, `PermissionUI`);
         } catch (e) {
             log.warning(`Permission request: failed to update message after timeout: ${String(e)}`, `PermissionUI`);
-        }
-        try {
-            await interaction.editReply({ content: `Permission request timed out.` });
-        } catch (e) {
-            log.warning(
-                `Permission request: failed to edit original interaction reply after timeout: ${String(e)}`,
-                `PermissionUI`,
-            );
         }
         return `timeout`;
     }
