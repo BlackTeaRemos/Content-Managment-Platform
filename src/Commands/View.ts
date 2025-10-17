@@ -15,6 +15,7 @@ import { getGame } from '../Flow/Object/Game/View.js';
 import { resolve } from '../Common/permission/index.js';
 import type { TokenSegmentInput } from '../Common/permission/index.js';
 import { requestPermissionFromAdmin } from '../SubCommand/Permission/requestPermissionFromAdmin.js';
+import { uniqueSelectOptions } from '../Common/SelectMenuUtils.js';
 
 export const data = new SlashCommandBuilder().setName(`view`).setDescription(`Interactive view of stored objects`);
 export const permissionTokens: TokenSegmentInput[][] = [[`command`, `view`]];
@@ -23,27 +24,6 @@ interface State {
     type?: string;
     id?: string;
     orgUid?: string; // selected organization for description context
-}
-
-// Ensure select menu options have unique values and fit Discord constraints
-function uniqueSelectOptions<T extends { value: string }>(options: T[], max = 25): T[] {
-    const seen = new Set<string>();
-    const out: T[] = [];
-    for (const o of options) {
-        const v = (o.value ?? ``).toString();
-        if (!v) {
-            continue;
-        } // skip empty values
-        if (seen.has(v)) {
-            continue;
-        }
-        seen.add(v);
-        out.push(o);
-        if (out.length >= max) {
-            break;
-        }
-    }
-    return out;
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
