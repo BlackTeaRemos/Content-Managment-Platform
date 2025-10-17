@@ -15,12 +15,16 @@ import type { ResolveEnsureOptions, ResolveEnsureResult, TokenResolveContext } f
  * The function is explicitly named `resolve` to preserve a consistent symbol name across the codebase.
  *
  * @param templates - An array of permission templates, either as strings or arrays of TokenSegmentInput. Defines the permissions to resolve.
- *   Example: ['admin.view'], [['user', 'edit', 'profile']]
  * @param options - Optional configuration object for resolution, including context, member, permissions, and approval handlers.
- *   Example: { context: { guildId: '123' }, member: someGuildMember, permissions: permissionManager, requestApproval: async (data) => 'approve_once' }
  * @returns A promise resolving to ResolveEnsureResult, indicating success or failure with details like tokens, reasons, and approval decisions.
- *   Example success: { success: true, detail: { tokens: [...], requiresApproval: false } }
- *   Example failure: { success: false, detail: { tokens: [...], reason: 'Permission denied', requiresApproval: true } }
+ * @example
+ * // Resolve permissions for admin view
+ * const result = await resolve(['admin.view'], {
+ *   context: { guildId: '123' },
+ *   member: someGuildMember,
+ *   permissions: { 'admin.view': 'allowed' }
+ * });
+ * // result: { success: true, detail: { tokens: [['admin', 'view']], requiresApproval: false } }
  */
 export async function resolve(
     templates: Array<string | TokenSegmentInput[]>,
